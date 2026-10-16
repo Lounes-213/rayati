@@ -19,11 +19,17 @@ function activateFonts(): void {
   window.setTimeout(activate, 2000);
 }
 
+import { startPresenceHeartbeat } from './services/presenceClient';
+
 const root = document.getElementById('app');
 if (root) {
   activateFonts();
   const app = createApp({ root });
   void app.start();
+
+  // Start real-time presence heartbeat to Cloudflare / local network
+  startPresenceHeartbeat(() => app.context.state.seat);
+
   // Exposed for field debugging and for the k6/browser smoke checks.
   Object.assign(window as unknown as Record<string, unknown>, { __rayati: app.context });
 }

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>غرفة التحكم في الدخلة · RAYATI Stadium Control</title>
-    <meta name="description" content="لوحة التحكم الرئيسية للمنظمين: تحديد الإطار (Cadre ROI)، عدد الهواتف المتصلة، برمجة التيفو وتعيين الصور لحظياً." />
+    <meta name="description" content="لوحة التحكم الرئيسية للمنظمين: تحديد الإطار (Cadre ROI)، عدد الهواتف المتصلة الحقيقية، برمجة التيفو وتعيين الصور لحظياً." />
     <meta name="theme-color" content="#05070A" />
     <meta name="color-scheme" content="dark" />
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
@@ -189,6 +189,26 @@
         background: var(--c-surface-3);
         color: #fff;
       }
+      .data-source-pill {
+        display: flex;
+        align-items: center;
+        background: rgba(10, 125, 62, 0.15);
+        border: 1px solid rgba(18, 194, 98, 0.4);
+        border-radius: var(--r-full);
+        padding: 4px 10px;
+        font-size: 12px;
+        gap: 6px;
+      }
+      .device-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(0,0,0,0.4);
+        padding: 8px 12px;
+        border-radius: var(--r-sm);
+        border: 1px solid var(--c-line);
+        font-size: 12px;
+      }
     </style>
   </head>
   <body class="control-page">
@@ -198,32 +218,38 @@
           غرفة التحكم في الدخلة · STADIUM REGIE
         </span>
         <h1 style="font-size: 1.25rem; margin: 0; color: #fff;">
-          راياتي <span style="color: var(--c-text-muted); font-size: 0.85rem;">(Nelson Mandela Stadium)</span>
+          راياتي <span style="color: var(--c-text-muted); font-size: 0.85rem;">(Live Broadcast & Control)</span>
         </h1>
       </div>
 
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <span class="pill pill--ok" id="statusPill"><span class="pill__dot"></span>النظام متصل وجاهز</span>
-        <span class="muted" style="font-size: 12px;">خاص بالمنظمين</span>
+      <!-- Live / Simulation Mode Switcher -->
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <div class="data-source-pill">
+          <span class="hud-dot-rec"></span>
+          <span id="dataSourceLabel" style="font-weight: 700; color: #fff;">بيانات حية 100% (Real Live Devices)</span>
+        </div>
+        <button type="button" class="btn btn--secondary btn--sm" id="toggleDataModeBtn" title="التبديل بين الأجهزة الحقيقية فقط والمحاكاة الكاملة">
+          🧪 تجربة وضع المحاكاة (+8,420 افتراضي)
+        </button>
       </div>
     </header>
 
     <!-- Telemetry numbers (ONLY Connected supporters, ZERO total seats/places) -->
     <section class="telemetry-row">
-      <div class="telemetry-card">
-        <span class="telemetry-lbl">الهواتف المتصلة بالدخلة</span>
-        <span class="telemetry-val telemetry-val--green" id="connectedCount">8,420</span>
-        <span class="telemetry-lbl" id="connectedTrend">🟢 اتصال نشط ومتزامن</span>
+      <div class="telemetry-card" style="border-color: rgba(18, 194, 98, 0.5);">
+        <span class="telemetry-lbl">الهواتف الحقيقية المتصلة حالياً</span>
+        <span class="telemetry-val telemetry-val--green" id="connectedCount">0</span>
+        <span class="telemetry-lbl" id="connectedTrend">📡 مراقبة البث المباشر</span>
       </div>
-      <div class="telemetry-card" style="border-color: rgba(212, 175, 55, 0.4);">
+      <div class="telemetry-card" style="border-color: rgba(212, 175, 55, 0.5);">
         <span class="telemetry-lbl">المتصلون داخل الإطار المحدد</span>
-        <span class="telemetry-val telemetry-val--gold" id="cadreCount">8,420</span>
-        <span class="telemetry-lbl" id="cadrePct">100% من الحاضرين (كامل المدرج)</span>
+        <span class="telemetry-val telemetry-val--gold" id="cadreCount">0</span>
+        <span class="telemetry-lbl" id="cadrePct">0% من الهواتف النشطة</span>
       </div>
       <div class="telemetry-card">
         <span class="telemetry-lbl">التزامن الزمني للشبكة</span>
         <span class="telemetry-val" id="syncDrift">±2 ms</span>
-        <span class="telemetry-lbl">دقة ذرية للساعة المحلية</span>
+        <span class="telemetry-lbl">Cloudflare Atomic Clock</span>
       </div>
       <div class="telemetry-card">
         <span class="telemetry-lbl">التيفو / المحتوى النشط</span>
@@ -274,7 +300,7 @@
           <canvas id="standCanvas" class="stand-canvas"></canvas>
           <div class="canvas-hud-badge">
             <span class="hud-dot-rec" id="hudDot"></span>
-            <span id="canvasHudText">STADIUM GRID · 8,420 PHONES ACTIVE</span>
+            <span id="canvasHudText">REAL LIVE · 0 PHONES CONNECTED</span>
           </div>
         </div>
 
@@ -286,17 +312,35 @@
           <button type="button" class="btn btn--secondary btn--sm" id="resetCadreBtn">
             ↺ إعادة ضبط الإطار
           </button>
+          <button type="button" class="btn btn--secondary btn--sm" id="refreshPresenceBtn">
+            🔄 تحديث الاتصال الآن
+          </button>
         </div>
 
         <!-- Zone Details Summary -->
         <div style="background: var(--c-surface-2); border-radius: var(--r-md); padding: 12px; font-size: 12px; border: 1px solid var(--c-line);">
           <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
             <span style="font-weight: 700; color: #fff;" id="selectedCadreTitle">الإطار المختار: كامل المدرج (العرض الكلي)</span>
-            <span style="color: var(--c-gold); font-family: var(--font-num);" id="cadreStatsDetail">8,420 هاتف داخل الإطار</span>
+            <span style="color: var(--c-gold); font-family: var(--font-num);" id="cadreStatsDetail">0 هاتف داخل الإطار</span>
           </div>
           <p class="muted" style="margin: 0; font-size: 11px;">
-            جميع الهواتف داخل هذا الإطار ستستقبل التيفو أو الصورة المحددة، بينما الهواتف خارج الإطار تعمل حسب نمط الخلفية المختار.
+            الهواتف المتصلة الحقيقية تظهر بنقاط ذهبية مضيئة وتتلقى التيفو أو الصورة المخصصة فورياً.
           </p>
+        </div>
+
+        <!-- Real Connected Devices Drawer -->
+        <div style="background: rgba(0,0,0,0.5); border-radius: var(--r-md); padding: 12px; border: 1px solid var(--c-line);">
+          <div class="row row--between" style="margin-bottom: 8px;">
+            <span style="font-size: 12px; font-weight: 700; color: #fff;">
+              📱 قائمة الهواتف الحقيقية المتصلة مباشرة (<span id="devicesListCount">0</span>) :
+            </span>
+            <span class="muted" style="font-size: 11px;">Auto-sync 2.5s</span>
+          </div>
+          <div id="devicesContainer" style="display: flex; flex-direction: column; gap: 6px; max-height: 140px; overflow-y: auto;">
+            <div class="device-item" style="color: var(--c-text-muted); justify-content: center;">
+              في انتظار دخول أول هاتف إلى rayati.pages.dev ...
+            </div>
+          </div>
         </div>
       </section>
 

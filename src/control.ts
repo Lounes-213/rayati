@@ -11,6 +11,7 @@ import {
   generateShowFromImage,
   generateShowWithCadrePreset,
 } from './services/cadreMapping';
+import { fetchLivePresence, type PresenceDevice } from './services/presenceClient';
 import type { ShowFile } from './core/types';
 
 const seats = prepareSeats(seatsJson as never);
@@ -22,6 +23,9 @@ const camVideo = document.getElementById('camVideo') as HTMLVideoElement;
 const viewToggleBtn = document.getElementById('viewToggleBtn') as HTMLButtonElement;
 const startScanBtn = document.getElementById('startScanBtn') as HTMLButtonElement;
 const resetCadreBtn = document.getElementById('resetCadreBtn') as HTMLButtonElement;
+const refreshPresenceBtn = document.getElementById('refreshPresenceBtn') as HTMLButtonElement;
+const toggleDataModeBtn = document.getElementById('toggleDataModeBtn') as HTMLButtonElement;
+const dataSourceLabel = document.getElementById('dataSourceLabel') as HTMLElement;
 
 const connectedCountEl = document.getElementById('connectedCount') as HTMLElement;
 const cadreCountEl = document.getElementById('cadreCount') as HTMLElement;
@@ -32,6 +36,8 @@ const selectedCadreTitle = document.getElementById('selectedCadreTitle') as HTML
 const cadreStatsDetail = document.getElementById('cadreStatsDetail') as HTMLElement;
 const canvasHudText = document.getElementById('canvasHudText') as HTMLElement;
 const hudDot = document.getElementById('hudDot') as HTMLElement;
+const devicesContainer = document.getElementById('devicesContainer') as HTMLElement;
+const devicesListCount = document.getElementById('devicesListCount') as HTMLElement;
 
 const masterClock = document.getElementById('masterClock') as HTMLElement;
 const countdownBanner = document.getElementById('countdownBanner') as HTMLElement;
@@ -47,7 +53,8 @@ const imagesPanel = document.getElementById('imagesPanel') as HTMLElement;
 const imageFileInput = document.getElementById('imageFileInput') as HTMLInputElement;
 const outsideModeSelect = document.getElementById('outsideModeSelect') as HTMLSelectElement;
 
-// State
+// State: Real Data 100% by default!
+let isSimulationMode = false;
 let isCameraView = false;
 let cameraStream: MediaStream | null = null;
 let isScanning = false;
@@ -57,16 +64,23 @@ let currentCadre: CadreBox = { ...PRESET_CADRES.full };
 let currentShow: ShowFile | null = null;
 let customImageCanvas: HTMLCanvasElement | null = null;
 
-// Simulated connected seats set (8,420 randomly assigned connected phones)
-const connectedSeats = new Set<number>();
-const totalStadiumSeats = seats.total;
-const initialTarget = 8420;
-while (connectedSeats.size < initialTarget) {
-  connectedSeats.add(Math.floor(Math.random() * totalStadiumSeats));
-}
+// Registry of REAL devices connected right now
+const realDevices = new Map<string, PresenceDevice>();
+// Connected seat indices (for stadium canvas and cadre calculations)
+let activeSeatIndices = new Set<number>();
 
-// BroadcastChannel for live inter-tab synchronization
-const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('rayati_control') : null;
+// BroadcastChannels for local zero-latency tab communication
+const controlChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('rayati_control') : null;
+const presenceChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('rayati_presence') : null;
+
+// Listen to local presence channel
+presenceChannel?.addEventListener('message', (event) => {
+  if (event.data?.type === 'heartbeat' && event.data.device) {
+    const dev = event.data.device as PresenceDevice;
+    realDevices.set(dev.deviceId, dev);
+    updateFromPresence();
+  }
+});
 
 // Clock updates
 function updateClock(): void {
@@ -79,32 +93,127 @@ function updateClock(): void {
 }
 setInterval(updateClock, 50);
 
-// Fluctuate connected phones slightly (+1 to 3 fans arriving)
-setInterval(() => {
-  if (connectedSeats.size < totalStadiumSeats - 50) {
-    for (let i = 0; i < Math.floor(Math.random() * 3) + 1; i++) {
-      connectedSeats.add(Math.floor(Math.random() * totalStadiumSeats));
-    }
-    updateTelemetry();
+// Fetch real presence from Cloudflare API every 2.5 seconds
+async function syncLivePresence(): Promise<void> {
+  const res = await fetchLivePresence();
+  const now = Date.now();
+
+  // Clean stale devices older than 20 seconds
+  for (const [id, dev] of realDevices.entries()) {
+    if (now - dev.lastSeen > 20000) realDevices.delete(id);
   }
-}, 4000);
+
+  // Merge incoming devices from Cloudflare
+  for (const dev of res.devices) {
+    realDevices.set(dev.deviceId, dev);
+  }
+
+  updateFromPresence();
+}
+
+setInterval(() => void syncLivePresence(), 2500);
+void syncLivePresence();
+
+refreshPresenceBtn?.addEventListener('click', () => {
+  void syncLivePresence();
+});
+
+// Toggle between 100% Real Devices and Simulated 8,420 Stadium Test Mode
+toggleDataModeBtn?.addEventListener('click', () => {
+  isSimulationMode = !isSimulationMode;
+  if (isSimulationMode) {
+    toggleDataModeBtn.textContent = '🔴 العودة إلى البيانات الحقيقية فقط';
+    toggleDataModeBtn.className = 'btn btn--primary btn--sm';
+    if (dataSourceLabel) dataSourceLabel.textContent = 'وضع المحاكاة الكاملة (+8,420 افتراضي)';
+  } else {
+    toggleDataModeBtn.textContent = '🧪 تجربة وضع المحاكاة (+8,420 افتراضي)';
+    toggleDataModeBtn.className = 'btn btn--secondary btn--sm';
+    if (dataSourceLabel) dataSourceLabel.textContent = 'بيانات حية 100% (Real Live Devices)';
+  }
+  updateFromPresence();
+});
+
+// Recompute active seat indices and update UI
+function updateFromPresence(): void {
+  activeSeatIndices = new Set<number>();
+
+  if (isSimulationMode) {
+    // Fill 8,420 mock seats for stadium rehearsal preview
+    for (let i = 0; i < 8420; i++) {
+      activeSeatIndices.add(i);
+    }
+  } else {
+    // 100% REAL LIVE DEVICES
+    let unassignedCounter = 0;
+    for (const dev of realDevices.values()) {
+      if (dev.seat && typeof dev.seat.index === 'number' && dev.seat.index >= 0) {
+        activeSeatIndices.add(dev.seat.index);
+      } else {
+        // If device has no locked seat yet, map to first available seats in Section A
+        activeSeatIndices.add(unassignedCounter);
+        unassignedCounter++;
+      }
+    }
+  }
+
+  renderDevicesList();
+  updateTelemetry();
+}
+
+// Render the list of real connected phones in the UI
+function renderDevicesList(): void {
+  const devices = Array.from(realDevices.values());
+  if (devicesListCount) devicesListCount.textContent = String(devices.length);
+
+  if (!devicesContainer) return;
+
+  if (devices.length === 0) {
+    devicesContainer.innerHTML = `
+      <div class="device-item" style="color: var(--c-text-muted); justify-content: center;">
+        في انتظار دخول أول هاتف إلى rayati.pages.dev ...
+      </div>
+    `;
+    return;
+  }
+
+  devicesContainer.innerHTML = '';
+  devices.forEach((dev, idx) => {
+    const item = document.createElement('div');
+    item.className = 'device-item';
+    const seatLabel = dev.seat ? `${dev.seat.section} · صف ${dev.seat.row} · مقعد ${dev.seat.seat}` : `بانتظار تحديد المقعد`;
+    const secondsAgo = Math.max(0, Math.round((Date.now() - dev.lastSeen) / 1000));
+
+    item.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="color: var(--c-green-bright); font-size: 10px;">●</span>
+        <strong style="color: #fff;">📱 هاتف #${idx + 1}</strong>
+        <span class="muted" style="font-size: 11px;">(${dev.deviceId.substring(0, 10)})</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="color: var(--c-gold); font-family: var(--font-num);">${seatLabel}</span>
+        <span class="muted" style="font-size: 11px;">منذ ${secondsAgo}ث</span>
+      </div>
+    `;
+    devicesContainer.appendChild(item);
+  });
+}
 
 // Telemetry updater
 function updateTelemetry(): void {
-  const totalConnected = connectedSeats.size;
+  const totalConnected = activeSeatIndices.size;
   if (connectedCountEl) connectedCountEl.textContent = totalConnected.toLocaleString();
 
   const { seatsInfo } = analyzeCadreSeats(seats, currentCadre);
-  const connectedInCadre = countConnectedInCadre(seatsInfo, connectedSeats);
+  const connectedInCadre = countConnectedInCadre(seatsInfo, activeSeatIndices);
 
   if (cadreCountEl) cadreCountEl.textContent = connectedInCadre.toLocaleString();
   const pct = totalConnected > 0 ? ((connectedInCadre / totalConnected) * 100).toFixed(1) : '0';
 
   if (cadrePctEl) {
     if (currentCadre.id === 'full') {
-      cadrePctEl.textContent = '100% من الحاضرين (كامل المدرج)';
+      cadrePctEl.textContent = `${totalConnected} هاتف (كامل المدرج)`;
     } else {
-      cadrePctEl.textContent = `${pct}% من مجمل الهواتف المتصلة`;
+      cadrePctEl.textContent = `${pct}% من الهواتف المتصلة (${connectedInCadre} هاتف)`;
     }
   }
 
@@ -116,6 +225,12 @@ function updateTelemetry(): void {
   }
   if (cadreActiveModeLabel) {
     cadreActiveModeLabel.textContent = `داخل ${currentCadre.name}`;
+  }
+
+  if (canvasHudText) {
+    canvasHudText.textContent = isSimulationMode
+      ? `SIMULATION · 8,420 VIRTUAL FANS`
+      : `REAL LIVE · ${totalConnected} REAL PHONE(S) CONNECTED`;
   }
 }
 
@@ -165,7 +280,6 @@ function setupCadreInteractions(): void {
   const onPointerUp = () => {
     if (isDraggingCadre) {
       isDraggingCadre = false;
-      // Ensure minimum box size
       if (currentCadre.xMax - currentCadre.xMin < 0.05) currentCadre.xMax = currentCadre.xMin + 0.1;
       if (currentCadre.yMax - currentCadre.yMin < 0.05) currentCadre.yMax = currentCadre.yMin + 0.1;
       rebuildCurrentShow();
@@ -237,12 +351,12 @@ async function toggleView(): Promise<void> {
       cameraStream.getTracks().forEach((t) => t.stop());
       cameraStream = null;
     }
-    if (canvasHudText) canvasHudText.textContent = `STADIUM GRID · ${connectedSeats.size} PHONES`;
+    if (canvasHudText) canvasHudText.textContent = `STADIUM GRID · ${activeSeatIndices.size} PHONES`;
   }
 }
 viewToggleBtn?.addEventListener('click', () => void toggleView());
 
-// In-Browser Optical CV Scanner simulation
+// In-Browser Optical CV Scanner
 startScanBtn?.addEventListener('click', () => {
   isScanning = !isScanning;
   startScanBtn.textContent = isScanning ? '⏹️ إيقاف المسح' : '⚡ مسح ضوئي لحظي وتحديث الهواتف (In-Browser CV)';
@@ -259,8 +373,8 @@ startScanBtn?.addEventListener('click', () => {
       startScanBtn.textContent = '⚡ مسح ضوئي لحظي وتحديث الهواتف (In-Browser CV)';
       startScanBtn.style.background = 'var(--c-gold)';
       if (hudDot) hudDot.className = 'hud-dot-rec';
-      if (canvasHudText) canvasHudText.textContent = `STADIUM GRID · ${connectedSeats.size} PHONES ACTIVE`;
-      alert(`اكتمل المسح البصري لـ ${connectedSeats.size.toLocaleString()} هاتف وتحديث خريطة المقاعد بنجاح! 🇩🇿`);
+      updateTelemetry();
+      alert(`اكتمل المسح البصري لـ ${activeSeatIndices.size.toLocaleString()} هاتف وتحديث خريطة المقاعد بنجاح! 🇩🇿`);
     }, 4000);
   }
 });
@@ -297,28 +411,48 @@ function drawStandCanvas(): void {
     }
   }
 
-  // Draw connected phone dots
+  // Draw phone dots for active connected phones
   const { seatsInfo } = analyzeCadreSeats(seats, currentCadre);
-  const dotRadius = Math.max(1.5, width / 240);
+  const dotRadius = Math.max(3.5, width / 180);
 
-  for (let i = 0; i < seatsInfo.length; i += 3) {
-    // sample every 3rd seat for performant 60fps rendering
+  // If in real live mode and no phones yet, draw helpful prompt in canvas
+  if (!isSimulationMode && activeSeatIndices.size === 0) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.font = '13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('📡 في انتظار دخول الهواتف إلى rayati.pages.dev...', width / 2, height / 2);
+    ctx.textAlign = 'start';
+  }
+
+  for (let i = 0; i < seatsInfo.length; i++) {
     const s = seatsInfo[i];
     if (!s) continue;
-    const isConn = connectedSeats.has(s.seatIndex);
+    const isConn = activeSeatIndices.has(s.seatIndex);
     if (!isConn) continue;
 
     const px = s.nx * width;
     const py = s.ny * height;
 
-    if (s.inCadre) {
-      ctx.fillStyle = '#D4AF37'; // Golden phone in cadre
+    if (!isSimulationMode) {
+      // Real live device: draw glowing animated radar pulse!
+      const pulse = (Math.sin(Date.now() / 200) * 0.5 + 0.5) * 4;
+      ctx.strokeStyle = 'rgba(212, 175, 55, 0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(px, py, dotRadius + 4 + pulse, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = s.inCadre ? '#D4AF37' : '#12C262';
+      ctx.beginPath();
+      ctx.arc(px, py, dotRadius, 0, Math.PI * 2);
+      ctx.fill();
     } else {
-      ctx.fillStyle = 'rgba(10, 125, 62, 0.6)'; // Subtle emerald phone outside
+      // Simulation mode
+      ctx.fillStyle = s.inCadre ? '#D4AF37' : 'rgba(10, 125, 62, 0.6)';
+      ctx.beginPath();
+      ctx.arc(px, py, 2, 0, Math.PI * 2);
+      ctx.fill();
     }
-    ctx.beginPath();
-    ctx.arc(px, py, dotRadius, 0, Math.PI * 2);
-    ctx.fill();
   }
 
   // Draw Cadre Bounding Box
@@ -330,13 +464,9 @@ function drawStandCanvas(): void {
   // Semi-transparent overlay outside cadre
   if (currentCadre.id !== 'full') {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-    // Top
     ctx.fillRect(0, 0, width, by);
-    // Bottom
     ctx.fillRect(0, by + bh, width, height - (by + bh));
-    // Left
     ctx.fillRect(0, by, bx, bh);
-    // Right
     ctx.fillRect(bx + bw, by, width - (bx + bw), bh);
   }
 
@@ -395,12 +525,10 @@ function drawPitchPreview(): void {
 
   if (!currentShow) return;
 
-  // Draw perspective rows representing the grandstand illuminated by phones
   const palette = currentShow.palette;
   const { seatsInfo } = analyzeCadreSeats(seats, currentCadre);
   const runs = currentShow.seatIndex.runs;
 
-  // Expand first tick colors
   const seatColors: string[] = new Array(seats.total);
   let curSeat = 0;
   for (const [timelineIdx, count] of runs) {
@@ -413,23 +541,21 @@ function drawPitchPreview(): void {
     }
   }
 
-  // Draw crowd dots with glow
-  for (let i = 0; i < seatsInfo.length; i += 4) {
+  for (let i = 0; i < seatsInfo.length; i++) {
     const s = seatsInfo[i];
     if (!s) continue;
-    if (!connectedSeats.has(s.seatIndex)) continue;
+    if (!activeSeatIndices.has(s.seatIndex)) continue;
 
     const col = seatColors[s.seatIndex] || '#000000';
     if (col === '#000000') continue;
 
-    // Perspective projection from pitch
     const pitchX = (s.nx - 0.5) * (0.6 + s.ny * 0.4) + 0.5;
     const px = pitchX * w;
     const py = (0.2 + s.ny * 0.75) * h;
 
     ctx.fillStyle = col;
     ctx.beginPath();
-    ctx.arc(px, py, 2.2, 0, Math.PI * 2);
+    ctx.arc(px, py, 3.5, 0, Math.PI * 2);
     ctx.fill();
   }
 }
@@ -456,13 +582,20 @@ function rebuildCurrentShow(): void {
     );
   }
 
-  // Save to localStorage for instant local tab sync
+  // Save to localStorage and broadcast to local tabs
   if (currentShow) {
     try {
       localStorage.setItem('rayati_active_show', JSON.stringify(currentShow));
-      channel?.postMessage({ type: 'show_updated', show: currentShow });
+      controlChannel?.postMessage({ type: 'show_updated', show: currentShow });
+
+      // Also post to Cloudflare API so remote phones receive it
+      void fetch('/api/show', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ type: 'change_tifo', tifo: activeTifoType, show: currentShow }),
+      }).catch(() => {});
     } catch {
-      // quota limit fallback
+      // quota fallback
     }
   }
 
@@ -485,10 +618,7 @@ tabImages?.addEventListener('click', () => {
   tabPresets.classList.remove('mode-tab--active');
   imagesPanel.style.display = 'flex';
   presetsPanel.style.display = 'none';
-  // If no custom image yet, generate default emblem
-  if (!customImageCanvas) {
-    loadEmblemPreset('crescent_gold');
-  }
+  if (!customImageCanvas) loadEmblemPreset('crescent_gold');
 });
 
 // Preset Buttons
@@ -557,7 +687,6 @@ function loadEmblemPreset(type: string): void {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   if (type === 'crescent_gold') {
-    // Elegant Golden Crescent and Star
     ctx.fillStyle = '#0A7D3E';
     ctx.fillRect(0, 0, canvas.width / 2, canvas.height);
     ctx.fillStyle = '#FFFFFF';
@@ -574,14 +703,12 @@ function loadEmblemPreset(type: string): void {
     ctx.fill();
     if (activeTifoLabel) activeTifoLabel.textContent = '🌙 هلال ونجمة ذهبية';
   } else if (type === 'palestine_dz') {
-    // Palestine & Algerian brother flag stripes
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, 10);
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 10, canvas.width, 11);
     ctx.fillStyle = '#0A7D3E';
     ctx.fillRect(0, 21, canvas.width, 11);
-    // Red triangle
     ctx.fillStyle = '#D21034';
     ctx.beginPath();
     ctx.moveTo(0, 0);
@@ -591,7 +718,6 @@ function loadEmblemPreset(type: string): void {
     ctx.fill();
     if (activeTifoLabel) activeTifoLabel.textContent = '🇵🇸🇩🇿 خاوة خاوة';
   } else {
-    // Ultras Pyro Flame
     ctx.fillStyle = '#D21034';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#D4AF37';
@@ -622,7 +748,14 @@ outsideModeSelect?.addEventListener('change', () => {
 kickoff10sBtn?.addEventListener('click', () => {
   const targetTime = Date.now() + 10000;
   localStorage.setItem('rayati_master_start', String(targetTime));
-  channel?.postMessage({ type: 'start_countdown', targetTime });
+  controlChannel?.postMessage({ type: 'start_countdown', targetTime });
+
+  // Broadcast to Cloudflare API
+  void fetch('/api/show', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ type: 'start_countdown', targetTime }),
+  }).catch(() => {});
 
   countdownBanner.textContent = 'العد التنازلي انطلق: الدخلة تبدأ بعد 10 ثوانٍ !';
   countdownBanner.className = 'pill pill--warn';
@@ -642,13 +775,23 @@ kickoff10sBtn?.addEventListener('click', () => {
 
 instantStartBtn?.addEventListener('click', () => {
   const targetTime = Date.now();
-  channel?.postMessage({ type: 'instant_start', targetTime });
+  controlChannel?.postMessage({ type: 'instant_start', targetTime });
+  void fetch('/api/show', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ type: 'instant_start', targetTime }),
+  }).catch(() => {});
   countdownBanner.textContent = 'العرض انطلق فوري! 🇩🇿';
   countdownBanner.className = 'pill pill--ok';
 });
 
 blackoutBtn?.addEventListener('click', () => {
-  channel?.postMessage({ type: 'blackout' });
+  controlChannel?.postMessage({ type: 'blackout' });
+  void fetch('/api/show', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ type: 'blackout' }),
+  }).catch(() => {});
   countdownBanner.textContent = 'إطفاء الشاشات (Blackout نشط)';
   countdownBanner.className = 'pill';
 });
@@ -669,6 +812,6 @@ downloadShowBtn?.addEventListener('click', () => {
 
 // Init
 setupCadreInteractions();
-updateTelemetry();
+updateFromPresence();
 rebuildCurrentShow();
 requestAnimationFrame(drawStandCanvas);
