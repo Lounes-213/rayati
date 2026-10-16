@@ -24,6 +24,9 @@
 /guide.html
   Cache-Control: public, max-age=0, must-revalidate
 
+/control.html
+  Cache-Control: public, max-age=0, must-revalidate
+
 /seats.json
   Cache-Control: public, max-age=300
 

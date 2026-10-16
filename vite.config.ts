@@ -37,6 +37,7 @@ export default defineConfig({
         main: resolve(import.meta.dirname, 'index.html'),
         simulation: resolve(import.meta.dirname, 'simulation.html'),
         guide: resolve(import.meta.dirname, 'guide.html'),
+        control: resolve(import.meta.dirname, 'control.html'),
       },
       output: {
         entryFileNames: 'assets/[name]-[hash].js',
