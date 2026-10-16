@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>غرفة التحكم في الدخلة · RAYATI Stadium Control</title>
-    <meta name="description" content="لوحة التحكم الرئيسية للمنظمين: مراقبة الكاميرا، عدد الهواتف المتصلة، التحكم في انطلاق التيفو وتغيير الأنماط لحظياً." />
+    <meta name="description" content="لوحة التحكم الرئيسية للمنظمين: تحديد الإطار (Cadre ROI)، عدد الهواتف المتصلة، برمجة التيفو وتعيين الصور لحظياً." />
     <meta name="theme-color" content="#05070A" />
     <meta name="color-scheme" content="dark" />
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
@@ -34,17 +34,17 @@
       }
       .control-grid {
         display: grid;
-        grid-template-columns: minmax(360px, 1.2fr) minmax(320px, 1fr);
+        grid-template-columns: minmax(380px, 1.25fr) minmax(340px, 1fr);
         gap: var(--sp-4);
       }
-      @media (max-width: 990px) {
+      @media (max-width: 1024px) {
         .control-grid {
           grid-template-columns: 1fr;
         }
       }
       .telemetry-row {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
         gap: var(--sp-3);
         margin-bottom: var(--sp-4);
       }
@@ -56,6 +56,8 @@
         display: flex;
         flex-direction: column;
         gap: 4px;
+        position: relative;
+        overflow: hidden;
       }
       .telemetry-val {
         font-family: var(--font-num);
@@ -73,33 +75,44 @@
         font-size: 0.75rem;
         color: var(--c-text-muted);
       }
-      .cam-box {
+      .cadre-controls {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: var(--sp-2);
+      }
+      .canvas-container {
         position: relative;
         width: 100%;
-        height: 280px;
-        background: #000;
+        height: 320px;
+        background: #06090E;
         border-radius: var(--r-md);
         overflow: hidden;
         border: 1px solid var(--c-line-strong);
+        user-select: none;
       }
-      .cam-video {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-      .cam-canvas {
+      .stand-canvas {
         position: absolute;
         inset: 0;
         width: 100%;
         height: 100%;
-        pointer-events: none;
+        display: block;
+        cursor: crosshair;
       }
-      .cam-hud-badge {
+      .cam-video {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: none;
+      }
+      .canvas-hud-badge {
         position: absolute;
         top: 10px;
         inset-inline-start: 10px;
-        background: rgba(0,0,0,0.7);
+        background: rgba(0,0,0,0.75);
+        backdrop-filter: blur(8px);
         padding: 4px 10px;
         border-radius: 6px;
         font-family: var(--font-num);
@@ -108,46 +121,73 @@
         display: flex;
         align-items: center;
         gap: 6px;
+        pointer-events: none;
+        border: 1px solid rgba(255,255,255,0.1);
       }
       .hud-dot-rec {
         width: 8px;
         height: 8px;
         border-radius: 50%;
+        background: var(--c-green-bright);
+        box-shadow: 0 0 8px var(--c-green-bright);
+      }
+      .hud-dot-rec--scanning {
         background: #D21034;
+        box-shadow: 0 0 8px #D21034;
         animation: pulse-red 1s infinite;
       }
       @keyframes pulse-red {
         0%, 100% { opacity: 1; transform: scale(1); }
         50% { opacity: 0.4; transform: scale(1.3); }
       }
+      .preview-box {
+        position: relative;
+        width: 100%;
+        height: 200px;
+        background: #020406;
+        border-radius: var(--r-md);
+        border: 1px solid var(--c-line);
+        overflow: hidden;
+      }
+      .preview-canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
       .tifo-btn-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: var(--sp-2);
       }
-      .section-bar-wrap {
-        display: flex;
-        flex-direction: column;
-        gap: var(--sp-2);
-        margin-top: var(--sp-3);
-      }
-      .section-bar-row {
-        display: flex;
-        align-items: center;
+      .emblem-btn-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
         gap: 8px;
-        font-size: 11px;
-        color: var(--c-text-dim);
       }
-      .section-bar-track {
+      .mode-tab-bar {
+        display: flex;
+        gap: 4px;
+        background: var(--c-surface-2);
+        padding: 3px;
+        border-radius: var(--r-md);
+        margin-bottom: var(--sp-2);
+      }
+      .mode-tab {
         flex: 1;
-        height: 6px;
-        background: var(--c-surface-3);
-        border-radius: var(--r-full);
-        overflow: hidden;
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: center;
+        background: transparent;
+        color: var(--c-text-muted);
+        border: none;
+        border-radius: var(--r-sm);
+        cursor: pointer;
+        transition: all var(--dur-base) var(--ease);
       }
-      .section-bar-fill {
-        height: 100%;
-        background: linear-gradient(90deg, var(--c-green-bright), var(--c-gold));
+      .mode-tab--active {
+        background: var(--c-surface-3);
+        color: #fff;
       }
     </style>
   </head>
@@ -164,104 +204,207 @@
 
       <div style="display: flex; align-items: center; gap: 8px;">
         <span class="pill pill--ok" id="statusPill"><span class="pill__dot"></span>النظام متصل وجاهز</span>
-        <a href="/simulation.html" class="btn btn--secondary btn--sm" style="text-decoration: none;">🖥️ المحاكاة</a>
-        <a href="/" class="btn btn--secondary btn--sm" style="text-decoration: none;">📱 تطبيق المناصر</a>
+        <span class="muted" style="font-size: 12px;">خاص بالمنظمين</span>
       </div>
     </header>
 
-    <!-- Telemetry numbers -->
+    <!-- Telemetry numbers (ONLY Connected supporters, ZERO total seats/places) -->
     <section class="telemetry-row">
       <div class="telemetry-card">
         <span class="telemetry-lbl">الهواتف المتصلة بالدخلة</span>
         <span class="telemetry-val telemetry-val--green" id="connectedCount">8,420</span>
-        <span class="telemetry-lbl">من أصل 10,000 مقعد (84.2%)</span>
+        <span class="telemetry-lbl" id="connectedTrend">🟢 اتصال نشط ومتزامن</span>
       </div>
-      <div class="telemetry-card">
-        <span class="telemetry-lbl">حالة كاميرا المدرج</span>
-        <span class="telemetry-val telemetry-val--gold" id="camStatus">30 FPS</span>
-        <span class="telemetry-lbl">1080p Optical Tracking</span>
+      <div class="telemetry-card" style="border-color: rgba(212, 175, 55, 0.4);">
+        <span class="telemetry-lbl">المتصلون داخل الإطار المحدد</span>
+        <span class="telemetry-val telemetry-val--gold" id="cadreCount">8,420</span>
+        <span class="telemetry-lbl" id="cadrePct">100% من الحاضرين (كامل المدرج)</span>
       </div>
       <div class="telemetry-card">
         <span class="telemetry-lbl">التزامن الزمني للشبكة</span>
         <span class="telemetry-val" id="syncDrift">±2 ms</span>
-        <span class="telemetry-lbl">Atomic Clock Precision</span>
+        <span class="telemetry-lbl">دقة ذرية للساعة المحلية</span>
       </div>
       <div class="telemetry-card">
-        <span class="telemetry-lbl">التيفو النشط حالياً</span>
+        <span class="telemetry-lbl">التيفو / المحتوى النشط</span>
         <span class="telemetry-val telemetry-val--green" id="activeTifoLabel">علم الجزائر 🇩🇿</span>
-        <span class="telemetry-lbl">30s Loop · 5 ألوان</span>
+        <span class="telemetry-lbl" id="cadreActiveModeLabel">داخل كامل المدرج</span>
       </div>
     </section>
 
     <main class="control-grid">
-      <!-- Left Column: Camera + Computer Vision Scanner -->
+      <!-- Left Column: Interactive Stadium Stand & Cadre ROI Tool -->
       <section class="card" style="display: flex; flex-direction: column; gap: 12px;">
         <div class="row row--between">
-          <h2 class="card__title" style="margin: 0;">📹 كاميرا المدرج والرؤية الحاسوبية</h2>
-          <span class="muted" style="font-size: 11px;">Homography 3x3 + Gray Code</span>
+          <div>
+            <h2 class="card__title" style="margin: 0;">📐 أداة تحديد الإطار والمناطق (Sélecteur de Cadre)</h2>
+            <p class="muted" style="font-size: 11px; margin: 2px 0 0;">
+              اختر منطقة جاهزة أو اسحب بالماوس/اللمس لرسم إطار مخصص لعرض التيفو داخله.
+            </p>
+          </div>
+          <div style="display: flex; gap: 4px;">
+            <button type="button" class="btn btn--secondary btn--sm" id="viewToggleBtn">
+              📹 الكاميرا
+            </button>
+          </div>
         </div>
 
-        <div class="cam-box">
+        <!-- Quick Cadre Selection Buttons -->
+        <div class="cadre-controls">
+          <button type="button" class="btn btn--primary btn--sm" data-cadre="full">
+            🌐 كامل المدرج (الكل)
+          </button>
+          <button type="button" class="btn btn--secondary btn--sm" data-cadre="virage_nord">
+            🟢 الفيراج الشمالي
+          </button>
+          <button type="button" class="btn btn--secondary btn--sm" data-cadre="centrale">
+            🟡 المدرج الأوسط
+          </button>
+          <button type="button" class="btn btn--secondary btn--sm" data-cadre="virage_sud">
+            🔴 الفيراج الجنوبي
+          </button>
+          <button type="button" class="btn btn--secondary btn--sm" data-cadre="custom">
+            ✏️ إطار حر بالسحب
+          </button>
+        </div>
+
+        <!-- Interactive Canvas / Stand View -->
+        <div class="canvas-container" id="canvasContainer">
           <video id="camVideo" class="cam-video" autoplay playsinline muted></video>
-          <canvas id="camCanvas" class="cam-canvas"></canvas>
-          <div class="cam-hud-badge">
-            <span class="hud-dot-rec"></span>
-            <span id="camHudText">STAND CAM · SCAN READY</span>
+          <canvas id="standCanvas" class="stand-canvas"></canvas>
+          <div class="canvas-hud-badge">
+            <span class="hud-dot-rec" id="hudDot"></span>
+            <span id="canvasHudText">STADIUM GRID · 8,420 PHONES ACTIVE</span>
           </div>
         </div>
 
+        <!-- In-Browser Optical CV Scanner & Helpers -->
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button type="button" class="btn btn--secondary btn--sm" id="toggleCamBtn">
-            📷 تشغيل / تبديل الكاميرا
-          </button>
           <button type="button" class="btn btn--primary btn--sm" id="startScanBtn" style="background: var(--c-gold); color: #000;">
-            ⚡ بدء المسح الضوئي وتصحيح المقاعد
+            ⚡ مسح ضوئي لحظي وتحديث الهواتف (In-Browser CV)
+          </button>
+          <button type="button" class="btn btn--secondary btn--sm" id="resetCadreBtn">
+            ↺ إعادة ضبط الإطار
           </button>
         </div>
 
-        <p class="muted" style="font-size: 11px; margin: 0;">
-          الكاميرا تكتشف الهواتف التي ترمش بكود Gray Code وتقوم بربط إحداثياتها المسطحة مع شبكة الملعب تلقائياً عبر الهوموجرافيا.
-        </p>
-
-        <!-- Section connection stats -->
-        <div class="section-bar-wrap">
-          <span style="font-weight: 700; font-size: 12px; color: #fff;">نسبة امتلاء وجاهزية المدرجات :</span>
-          <div class="section-bar-row">
-            <span style="width: 100px;">الفيراج الشمالي A</span>
-            <div class="section-bar-track"><div class="section-bar-fill" style="width: 94%;"></div></div>
-            <span>94%</span>
+        <!-- Zone Details Summary -->
+        <div style="background: var(--c-surface-2); border-radius: var(--r-md); padding: 12px; font-size: 12px; border: 1px solid var(--c-line);">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span style="font-weight: 700; color: #fff;" id="selectedCadreTitle">الإطار المختار: كامل المدرج (العرض الكلي)</span>
+            <span style="color: var(--c-gold); font-family: var(--font-num);" id="cadreStatsDetail">8,420 هاتف داخل الإطار</span>
           </div>
-          <div class="section-bar-row">
-            <span style="width: 100px;">المدرج المقابل B</span>
-            <div class="section-bar-track"><div class="section-bar-fill" style="width: 88%;"></div></div>
-            <span>88%</span>
-          </div>
-          <div class="section-bar-row">
-            <span style="width: 100px;">الفيراج الجنوبي C</span>
-            <div class="section-bar-track"><div class="section-bar-fill" style="width: 91%;"></div></div>
-            <span>91%</span>
-          </div>
-          <div class="section-bar-row">
-            <span style="width: 100px;">المدرج المغطى D</span>
-            <div class="section-bar-track"><div class="section-bar-fill" style="width: 79%;"></div></div>
-            <span>79%</span>
-          </div>
+          <p class="muted" style="margin: 0; font-size: 11px;">
+            جميع الهواتف داخل هذا الإطار ستستقبل التيفو أو الصورة المحددة، بينما الهواتف خارج الإطار تعمل حسب نمط الخلفية المختار.
+          </p>
         </div>
       </section>
 
-      <!-- Right Column: Master Countdown & Tifo Switcher -->
+      <!-- Right Column: Tifo Preset & Custom Image Assignment + Master Trigger -->
       <section class="card" style="display: flex; flex-direction: column; gap: 14px;">
-        <h2 class="card__title" style="margin: 0;">⚡ التحكم الرئيسي في انطلاق الدخلة</h2>
-        
-        <div style="background: rgba(0,0,0,0.5); padding: 16px; border-radius: var(--r-md); border: 1px solid var(--c-line); text-align: center;">
+        <h2 class="card__title" style="margin: 0;">🎨 برمجة التيفو وتعيين الصورة على الإطار</h2>
+
+        <!-- Mode Tabs: Image vs Presets -->
+        <div class="mode-tab-bar">
+          <button type="button" class="mode-tab mode-tab--active" id="tabPresets">
+            ⚡ أنماط تيفو مبرمجة
+          </button>
+          <button type="button" class="mode-tab" id="tabImages">
+            🖼️ رفع صورة مخصصة للشاشة
+          </button>
+        </div>
+
+        <!-- Tab Content 1: Presets -->
+        <div id="presetsPanel">
+          <div class="tifo-btn-grid">
+            <button type="button" class="btn btn--primary btn--sm" data-tifo="algeria_flag">
+              🇩🇿 العلم الوطني الجزائري
+            </button>
+            <button type="button" class="btn btn--secondary btn--sm" data-tifo="stadium_wave">
+              🌊 موجة المدرج (OLA)
+            </button>
+            <button type="button" class="btn btn--secondary btn--sm" data-tifo="ultras_strobe">
+              ⚡ كراكاج الألتراس النبضي
+            </button>
+            <button type="button" class="btn btn--secondary btn--sm" data-tifo="club_mca">
+              🟢🔴 مولودية الجزائر
+            </button>
+            <button type="button" class="btn btn--secondary btn--sm" data-tifo="club_usma">
+              🔴⚫ اتحاد العاصمة
+            </button>
+            <button type="button" class="btn btn--secondary btn--sm" data-tifo="club_jsk">
+              🟡🟢 شبيبة القبائل
+            </button>
+            <button type="button" class="btn btn--secondary btn--sm" data-tifo="club_crb">
+              🔴⚪ شباب بلوزداد
+            </button>
+            <button type="button" class="btn btn--secondary btn--sm" data-tifo="club_ess">
+              ⚪⚫ وفاق سطيف
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab Content 2: Custom Image Mapping -->
+        <div id="imagesPanel" style="display: none; flex-direction: column; gap: 10px;">
+          <div>
+            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px; color: #fff;">
+              اختر صورة من حاسوبك / هاتفك لتطبيقها داخل الإطار :
+            </label>
+            <input type="file" id="imageFileInput" accept="image/*" class="input" style="font-size: 12px; padding: 6px;" />
+          </div>
+
+          <div>
+            <span style="font-size: 11px; color: var(--c-text-muted); display: block; margin-bottom: 6px;">
+              أو اختر شعاراً وطنياً جاهزاً :
+            </span>
+            <div class="emblem-btn-grid">
+              <button type="button" class="btn btn--secondary btn--sm" data-emblem="crescent_gold">
+                🌙 هلال ونجمة ذهبية
+              </button>
+              <button type="button" class="btn btn--secondary btn--sm" data-emblem="palestine_dz">
+                🇵🇸🇩🇿 خاوة خاوة
+              </button>
+              <button type="button" class="btn btn--secondary btn--sm" data-emblem="ultras_flame">
+                🔥 شعلة الألتراس
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Background Mode Outside Cadre -->
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: var(--r-md); border: 1px solid var(--c-line);">
+          <span style="font-size: 12px; color: var(--c-text-dim);">خارج الإطار المحدد :</span>
+          <select id="outsideModeSelect" class="input" style="width: auto; padding: 4px 8px; font-size: 12px;">
+            <option value="black">⬛ إطفاء الشاشات (Black)</option>
+            <option value="emerald">🟢 أخضر زمردي (#0A7D3E)</option>
+            <option value="white">⚪ أبيض ناصع (#FFFFFF)</option>
+            <option value="dim">🌑 إضاءة خافتة (Dim)</option>
+          </select>
+        </div>
+
+        <!-- Real-Time Pitch View Preview -->
+        <div>
+          <div class="row row--between" style="margin-bottom: 6px;">
+            <span style="font-weight: 700; font-size: 12px; color: #fff;">
+              👁️ معاينة شكل التيفو من أرضية الميدان (Pitch Preview) :
+            </span>
+            <span class="muted" style="font-size: 11px;" id="previewResLabel">Pixel Render</span>
+          </div>
+          <div class="preview-box">
+            <canvas id="previewCanvas" class="preview-canvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Master Kickoff & Synchronized Trigger -->
+        <div style="background: rgba(0,0,0,0.5); padding: 14px; border-radius: var(--r-md); border: 1px solid var(--c-line); text-align: center;">
           <span class="muted" style="font-size: 12px;">ساعة الدخلة الموحدة في كل الهواتف :</span>
-          <div id="masterClock" style="font-family: var(--font-num); font-size: 2.8rem; font-weight: 800; color: #fff; margin-block: 4px;">
-            00:00:00
+          <div id="masterClock" style="font-family: var(--font-num); font-size: 2.4rem; font-weight: 800; color: #fff; margin-block: 4px;">
+            00:00:00.00
           </div>
           <span class="pill pill--ok" id="countdownBanner">العرض جاهز للانطلاق</span>
         </div>
 
-        <!-- Master Trigger Buttons -->
+        <!-- Action Buttons -->
         <div style="display: flex; flex-direction: column; gap: 8px;">
           <button type="button" class="btn btn--primary btn--lg btn--block" id="kickoff10sBtn" style="font-size: 1rem; box-shadow: 0 4px 16px rgba(10, 125, 62, 0.4);">
             🚀 إطلاق الدخلة بعد 10 ثوانٍ (متزامن في كل الهواتف)
@@ -276,38 +419,7 @@
           </div>
         </div>
 
-        <!-- Tifo Switcher -->
-        <h3 style="font-size: 0.9rem; color: var(--c-gold); margin-top: 8px; margin-bottom: 4px;">
-          🎨 تبديل نمط التيفو فوراً (Changer le Tifo en direct) :
-        </h3>
-        <div class="tifo-btn-grid">
-          <button type="button" class="btn btn--secondary btn--sm" data-tifo="algeria_flag">
-            🇩🇿 العلم الوطني الجزائري
-          </button>
-          <button type="button" class="btn btn--secondary btn--sm" data-tifo="stadium_wave">
-            🌊 موجة المدرج (OLA)
-          </button>
-          <button type="button" class="btn btn--secondary btn--sm" data-tifo="ultras_strobe">
-            ⚡ كراكاج الألتراس النبضي
-          </button>
-          <button type="button" class="btn btn--secondary btn--sm" data-tifo="club_mca">
-            🟢🔴 مولودية الجزائر
-          </button>
-          <button type="button" class="btn btn--secondary btn--sm" data-tifo="club_usma">
-            🔴⚫ اتحاد العاصمة
-          </button>
-          <button type="button" class="btn btn--secondary btn--sm" data-tifo="club_jsk">
-            🟡🟢 شبيبة القبائل
-          </button>
-          <button type="button" class="btn btn--secondary btn--sm" data-tifo="club_crb">
-            🔴⚪ شباب بلوزداد
-          </button>
-          <button type="button" class="btn btn--secondary btn--sm" data-tifo="club_ess">
-            ⚪⚫ وفاق سطيف
-          </button>
-        </div>
-
-        <button type="button" class="btn btn--ghost btn--sm btn--block" id="downloadShowBtn" style="margin-top: 4px;">
+        <button type="button" class="btn btn--ghost btn--sm btn--block" id="downloadShowBtn">
           💾 تحميل ملف show.json الحالي
         </button>
       </section>
