@@ -57,26 +57,26 @@ export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
 
   const successHud = el(
     'div',
-    { class: 'flash__hud stack hidden', attrs: { style: 'max-width: 36ch; text-align: center; border-color: #D4AF37;' } },
+    { class: 'flash__hud stack hidden', attrs: { style: 'max-width: 36ch; text-align: center; border-color: rgba(212, 175, 55, 0.5); box-shadow: 0 16px 40px rgba(0,0,0,0.7);' } },
     el('div', { html: checkSvg }),
-    el('h2', { class: 'card__title', text: t('calibrate.successTitle'), attrs: { style: 'color: #D4AF37; font-size: 1.25rem;' } }),
-    el('p', { text: t('calibrate.successLead') }),
+    el('h2', { class: 'card__title', text: t('calibrate.successTitle'), attrs: { style: 'color: #D4AF37; font-size: 1.25rem; margin-top: 8px;' } }),
+    el('p', { text: t('calibrate.successLead'), attrs: { style: 'color: rgba(255,255,255,0.85); font-size: 0.85rem;' } }),
     el(
       'div',
-      { class: 'seat-summary', attrs: { style: 'background: rgba(0,0,0,0.4); justify-content: center;' } },
+      { class: 'seat-summary', attrs: { style: 'background: rgba(0,0,0,0.6); justify-content: center; border-color: rgba(212,175,55,0.35); padding: 8px 14px;' } },
       seatSummaryMeta,
     ),
     el('button', {
       class: 'btn btn--primary btn--lg btn--block',
       text: t('calibrate.continue'),
-      attrs: { type: 'button', style: 'margin-top: 12px; background: #D4AF37; color: #05070A;' },
+      attrs: { type: 'button', style: 'margin-top: 10px; background: #D4AF37; color: #05070A; font-weight: 700;' },
       on: { click: () => ctx.go('ready') },
     }),
     el('button', {
-      class: 'btn btn--ghost btn--sm btn--block',
-      text: t('calibrate.start'),
-      attrs: { type: 'button' },
-      on: { click: () => startCalibration() },
+      class: 'btn btn--secondary btn--sm btn--block',
+      text: t('welcome.changeSeat'),
+      attrs: { type: 'button', style: 'margin-top: 4px;' },
+      on: { click: () => ctx.go('seat') },
     }),
   );
 

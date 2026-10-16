@@ -752,14 +752,16 @@ html[dir='rtl'] .progress--indeterminate .progress__bar {
 .flash__hud {
   position: relative;
   z-index: 2;
-  max-width: 30ch;
+  max-width: 32ch;
   padding: var(--sp-4) var(--sp-5);
   border-radius: var(--r-lg);
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(5, 7, 10, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
   color: #fff;
   font-size: var(--fs-small);
-  mix-blend-mode: difference;
 }
 
 .flash__code {
