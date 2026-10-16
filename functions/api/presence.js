@@ -1,15 +1,14 @@
 /**
- * /api/presence — Live presence and real-time connected phone registry.
+ * /api/presence — Live phone presence and optical validation registry.
  *
- * Phones hit POST /api/presence every 3-5 seconds with their deviceId and seat.
- * The Admin dashboard queries GET /api/presence to see the exact real count
- * and coordinates of devices currently online in the stadium.
+ * 1. Phones send heartbeats (POST). They start unvalidated (validated: false).
+ * 2. PC / Camera detects phone blinking and validates them (POST action="validate").
+ * 3. Phone receives confirmation { validated: true, seat } and proceeds to Tifo!
  */
 
-// In-memory cache across Cloudflare isolate lifecycle
 const memoryPresence = new Map();
 
-function cleanStaleDevices(map, maxAgeMs = 20000) {
+function cleanStaleDevices(map, maxAgeMs = 25000) {
   const now = Date.now();
   for (const [id, dev] of map.entries()) {
     if (now - dev.lastSeen > maxAgeMs) {
@@ -21,8 +20,29 @@ function cleanStaleDevices(map, maxAgeMs = 20000) {
 export async function onRequestPost({ request, env }) {
   try {
     const data = await request.json();
-    const deviceId = String(data.deviceId || '').trim();
+    const action = String(data.action || 'heartbeat');
 
+    // Admin validation action: validate one or all devices
+    if (action === 'validate') {
+      const targetIds = Array.isArray(data.deviceIds) ? data.deviceIds : [];
+      const validateAll = Boolean(data.validateAll);
+      let validatedCount = 0;
+
+      for (const [id, dev] of memoryPresence.entries()) {
+        if (validateAll || targetIds.includes(id)) {
+          dev.validated = true;
+          if (data.seat) dev.seat = data.seat;
+          validatedCount++;
+        }
+      }
+
+      return new Response(JSON.stringify({ ok: true, validatedCount }), {
+        headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' },
+      });
+    }
+
+    // Phone heartbeat
+    const deviceId = String(data.deviceId || '').trim();
     if (!deviceId) {
       return new Response(JSON.stringify({ error: 'deviceId is required' }), {
         status: 400,
@@ -31,31 +51,35 @@ export async function onRequestPost({ request, env }) {
     }
 
     const now = Date.now();
+    const existing = memoryPresence.get(deviceId);
     const entry = {
       deviceId,
-      seat: data.seat || null,
+      seat: data.seat || existing?.seat || null,
       userAgent: request.headers.get('user-agent')?.substring(0, 80) || 'Device',
       lastSeen: now,
+      // Keep validated status if already confirmed by PC
+      validated: Boolean(existing?.validated || data.validated || false),
     };
 
-    // Update in-memory
     memoryPresence.set(deviceId, entry);
     cleanStaleDevices(memoryPresence);
 
-    // If KV is bound, also persist to KV
+    // Persist to KV if bound
     if (env && env.RAYATI_PRESENCE) {
       try {
         await env.RAYATI_PRESENCE.put(`dev:${deviceId}`, JSON.stringify(entry), {
-          expirationTtl: 60, // Auto-expire after 60s
+          expirationTtl: 60,
         });
       } catch {
-        // Continue with memory cache
+        // Continue
       }
     }
 
     return new Response(
       JSON.stringify({
         ok: true,
+        validated: entry.validated,
+        seat: entry.seat,
         activeCount: memoryPresence.size,
         serverTime: now,
       }),
@@ -75,36 +99,9 @@ export async function onRequestPost({ request, env }) {
   }
 }
 
-export async function onRequestGet({ env }) {
+export async function onRequestGet() {
   cleanStaleDevices(memoryPresence);
-
-  let devices = Array.from(memoryPresence.values());
-
-  // If KV is bound and memory has few items, check KV list
-  if (env && env.RAYATI_PRESENCE && devices.length === 0) {
-    try {
-      const list = await env.RAYATI_PRESENCE.list({ prefix: 'dev:', limit: 200 });
-      const now = Date.now();
-      const kvDevices = [];
-      for (const key of list.keys) {
-        const val = await env.RAYATI_PRESENCE.get(key.name);
-        if (val) {
-          try {
-            const parsed = JSON.parse(val);
-            if (now - parsed.lastSeen <= 25000) {
-              kvDevices.push(parsed);
-              memoryPresence.set(parsed.deviceId, parsed);
-            }
-          } catch {
-            // ignore bad json
-          }
-        }
-      }
-      if (kvDevices.length > 0) devices = kvDevices;
-    } catch {
-      // Continue with memory cache
-    }
-  }
+  const devices = Array.from(memoryPresence.values());
 
   return new Response(
     JSON.stringify({

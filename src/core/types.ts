@@ -100,8 +100,8 @@ export interface SeatSelection extends SeatRef {
   /** Global seat index used to look up the timeline. */
   index: number;
   key: string;
-  /** Where the seat came from: printed QR / manual picker. */
-  source: 'qr' | 'manual' | 'restored';
+  /** Where the seat came from: printed QR / manual picker / optical CV. */
+  source: 'qr' | 'manual' | 'restored' | 'optical';
 }
 
 export interface ClockState {

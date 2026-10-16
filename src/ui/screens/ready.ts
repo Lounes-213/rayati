@@ -27,13 +27,13 @@ export const createReadyScreen: ScreenFactory = (ctx: AppContext) => {
       el(
         'div',
         { class: 'card' },
-        el('h1', { class: 'section-title', text: t('seat.title') }),
-        el('p', { class: 'card__hint', text: t('seat.lead') }),
+        el('h1', { class: 'section-title', text: 'بانتظار المسح الضوئي' }),
+        el('p', { class: 'card__hint', text: 'لم يتم تحديد موقع مقعدك بعد. يرجى تشغيل الوميض لتلتقط كاميرا المنصة موقعك تلقائياً.' }),
         el('button', {
           class: 'btn btn--primary btn--block',
-          text: t('seat.pick'),
+          text: '⚡ بدء المسح الضوئي (Gray Code)',
           attrs: { type: 'button' },
-          on: { click: () => ctx.go('seat') },
+          on: { click: () => ctx.go('calibrate') },
         }),
       ),
     );
@@ -48,7 +48,7 @@ export const createReadyScreen: ScreenFactory = (ctx: AppContext) => {
       'div',
       { class: 'row row--between' },
       el('span', { class: 'card__title', text: t('ready.seatLabel') }),
-      el('span', { class: 'pill pill--ok' }, el('span', { class: 'pill__dot' }), state.seat.key),
+      el('span', { class: 'pill pill--ok' }, el('span', { class: 'pill__dot' }), 'تم التثبيت عبر كاميرا المنصة'),
     ),
     el(
       'div',
@@ -60,17 +60,11 @@ export const createReadyScreen: ScreenFactory = (ctx: AppContext) => {
         `${t('seat.section')} ${state.seat.section} · ${t('seat.row')} ${state.seat.row} · ${t('seat.number')} ${state.seat.seat}`,
       ),
     ),
-    el('button', {
-      class: 'btn btn--secondary btn--block',
-      text: t('welcome.changeSeat'),
-      attrs: { type: 'button' },
-      on: { click: () => ctx.go('seat') },
-    }),
   );
 
   const preview = ctx.seats.cached() ? createSeatPreview(ctx.seats.cached()!, t('a11y.seatGrid')) : null;
   preview?.update(state.seat);
-  if (preview) seatCard.insertBefore(preview.element, seatCard.lastElementChild);
+  if (preview) seatCard.appendChild(preview.element);
 
   /* ---------------------------------------------------------------- sync */
   const syncPill = el('span', { class: 'pill' });

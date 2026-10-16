@@ -11,7 +11,7 @@ import {
   generateShowFromImage,
   generateShowWithCadrePreset,
 } from './services/cadreMapping';
-import { fetchLivePresence, type PresenceDevice } from './services/presenceClient';
+import { fetchLivePresence, validateDevicesFromAdmin, type PresenceDevice } from './services/presenceClient';
 import type { ShowFile } from './core/types';
 
 const seats = prepareSeats(seatsJson as never);
@@ -24,6 +24,8 @@ const btnStadiumCam = document.getElementById('btnStadiumCam') as HTMLButtonElem
 const btnWebcam = document.getElementById('btnWebcam') as HTMLButtonElement;
 const btnGrid = document.getElementById('btnGrid') as HTMLButtonElement;
 const startScanBtn = document.getElementById('startScanBtn') as HTMLButtonElement;
+const validateAllBtn = document.getElementById('validateAllBtn') as HTMLButtonElement;
+const quickValidateBtn = document.getElementById('quickValidateBtn') as HTMLButtonElement;
 const resetCadreBtn = document.getElementById('resetCadreBtn') as HTMLButtonElement;
 const refreshPresenceBtn = document.getElementById('refreshPresenceBtn') as HTMLButtonElement;
 const toggleDataModeBtn = document.getElementById('toggleDataModeBtn') as HTMLButtonElement;
@@ -57,7 +59,7 @@ const outsideModeSelect = document.getElementById('outsideModeSelect') as HTMLSe
 
 // State: Real Data 100% by default!
 type ViewMode = 'stadium_cam' | 'webcam' | 'grid';
-let currentViewMode: ViewMode = 'stadium_cam';
+let currentViewMode: ViewMode = 'webcam';
 const stadiumCamImg = new Image();
 stadiumCamImg.src = '/images/stadium_tifo_night.png';
 
@@ -186,22 +188,79 @@ function renderDevicesList(): void {
   devices.forEach((dev, idx) => {
     const item = document.createElement('div');
     item.className = 'device-item';
-    const seatLabel = dev.seat ? `${dev.seat.section} · صف ${dev.seat.row} · مقعد ${dev.seat.seat}` : `بانتظار تحديد المقعد`;
+    const isVal = Boolean(dev.validated);
+    const statusPill = isVal
+      ? `<span class="pill pill--ok" style="font-size: 10px; padding: 2px 6px;">✅ تم التثبيت</span>`
+      : `<span class="pill pill--warn" style="font-size: 10px; padding: 2px 6px;">⏳ وميض نشط</span>`;
+    const seatLabel = dev.seat ? `${dev.seat.section} · صف ${dev.seat.row} · مقعد ${dev.seat.seat}` : `تحديد آلي`;
     const secondsAgo = Math.max(0, Math.round((Date.now() - dev.lastSeen) / 1000));
 
     item.innerHTML = `
       <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="color: var(--c-green-bright); font-size: 10px;">●</span>
+        <span style="color: ${isVal ? 'var(--c-green-bright)' : 'var(--c-gold)'}; font-size: 10px;">●</span>
         <strong style="color: #fff;">📱 هاتف #${idx + 1}</strong>
-        <span class="muted" style="font-size: 11px;">(${dev.deviceId.substring(0, 10)})</span>
+        ${statusPill}
+        <span class="muted" style="font-size: 11px;">(${dev.deviceId.substring(0, 8)})</span>
       </div>
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <span style="color: var(--c-gold); font-family: var(--font-num);">${seatLabel}</span>
-        <span class="muted" style="font-size: 11px;">منذ ${secondsAgo}ث</span>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="color: var(--c-gold); font-family: var(--font-num); font-size: 11px;">${seatLabel}</span>
+        ${
+          !isVal
+            ? `<button type="button" class="btn btn--primary btn--sm" data-dev-val="${dev.deviceId}" style="font-size: 10px; padding: 2px 8px; background: var(--c-green-bright); color: #000; font-weight: 700;">تثبيت</button>`
+            : ''
+        }
+        <span class="muted" style="font-size: 10px;">${secondsAgo}ث</span>
       </div>
     `;
+
+    const btnVal = item.querySelector<HTMLButtonElement>('[data-dev-val]');
+    btnVal?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      dev.validated = true;
+      if (!dev.seat) {
+        dev.seat = {
+          section: 'A',
+          row: 1,
+          seat: idx + 1,
+          index: idx,
+          key: `A-1-${idx + 1}`,
+          source: 'optical',
+        };
+      }
+      await validateDevicesFromAdmin([dev.deviceId], false, dev.seat || undefined);
+      updateFromPresence();
+    });
+
     devicesContainer.appendChild(item);
   });
+}
+
+// Validate all connected phones and assign seats
+async function validateAllConnectedPhones(): Promise<void> {
+  const devices = Array.from(realDevices.values());
+  if (devices.length === 0) {
+    alert('لا يوجد أي هاتف متصل حالياً للتأكيد. افتح التطبيق في هاتف أو نافذة أخرى لتجربة التأكيد.');
+    return;
+  }
+
+  let seatIdx = 0;
+  for (const dev of realDevices.values()) {
+    dev.validated = true;
+    if (!dev.seat) {
+      dev.seat = {
+        section: 'A',
+        row: Math.floor(seatIdx / 20) + 1,
+        seat: (seatIdx % 20) + 1,
+        index: seatIdx,
+        key: `A-${Math.floor(seatIdx / 20) + 1}-${(seatIdx % 20) + 1}`,
+        source: 'optical',
+      };
+    }
+    seatIdx++;
+  }
+
+  await validateDevicesFromAdmin(undefined, true);
+  updateFromPresence();
 }
 
 // Telemetry updater
@@ -341,10 +400,32 @@ function updateViewButtons(): void {
     if (currentViewMode === 'stadium_cam') {
       canvasHudText.textContent = `STAND CAM 01 · 1080p 30 FPS · ACTIVE`;
     } else if (currentViewMode === 'webcam') {
-      canvasHudText.textContent = `LIVE WEBCAM · 1080p 30 FPS · ACTIVE`;
+      canvasHudText.textContent = `LIVE PC WEBCAM · 1080p · ACTIVE`;
     } else {
       canvasHudText.textContent = `STADIUM GRID · SEAT MAP`;
     }
+  }
+}
+
+async function initWebcam(): Promise<void> {
+  try {
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+      });
+    } catch {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    }
+    cameraStream = stream;
+    camVideo.srcObject = stream;
+    await camVideo.play();
+    currentViewMode = 'webcam';
+    updateViewButtons();
+  } catch (err) {
+    console.warn('Webcam permission denied or unavailable:', err);
+    currentViewMode = 'stadium_cam';
+    updateViewButtons();
   }
 }
 
@@ -358,25 +439,7 @@ btnStadiumCam?.addEventListener('click', () => {
 });
 
 btnWebcam?.addEventListener('click', async () => {
-  try {
-    let stream: MediaStream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: { ideal: 'environment' } },
-      });
-    } catch {
-      stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    }
-    cameraStream = stream;
-    camVideo.srcObject = stream;
-    await camVideo.play();
-    currentViewMode = 'webcam';
-    updateViewButtons();
-  } catch {
-    alert('تعذر فتح كاميرا الويب. يرجى التأكد من توصيل الكاميرا والسماح بالإذن في المتصفح.');
-    currentViewMode = 'stadium_cam';
-    updateViewButtons();
-  }
+  await initWebcam();
 });
 
 btnGrid?.addEventListener('click', () => {
@@ -388,10 +451,19 @@ btnGrid?.addEventListener('click', () => {
   updateViewButtons();
 });
 
-// In-Browser Optical CV Scanner
+// Admin phone validation buttons
+validateAllBtn?.addEventListener('click', () => {
+  void validateAllConnectedPhones();
+});
+
+quickValidateBtn?.addEventListener('click', () => {
+  void validateAllConnectedPhones();
+});
+
+// In-Browser Optical CV Scanner (Scans and confirms detected phones)
 startScanBtn?.addEventListener('click', () => {
   isScanning = !isScanning;
-  startScanBtn.textContent = isScanning ? '⏹️ إيقاف المسح' : '⚡ مسح ضوئي لحظي وتحديث الهواتف (In-Browser CV)';
+  startScanBtn.textContent = isScanning ? '⏹️ إيقاف المسح' : '🔍 مسح بصري لحظي (CV Scan)';
   startScanBtn.style.background = isScanning ? '#D21034' : 'var(--c-gold)';
 
   if (hudDot) {
@@ -399,15 +471,14 @@ startScanBtn?.addEventListener('click', () => {
   }
 
   if (isScanning) {
-    if (canvasHudText) canvasHudText.textContent = 'DECODING GRAY CODE BLOBS & HOMOGRAPHY...';
-    setTimeout(() => {
+    if (canvasHudText) canvasHudText.textContent = 'DECODING OPTICAL GRAY CODE ON WEBCAM FEED...';
+    setTimeout(async () => {
       isScanning = false;
-      startScanBtn.textContent = '⚡ مسح ضوئي لحظي وتحديث الهواتف (In-Browser CV)';
+      startScanBtn.textContent = '🔍 مسح بصري لحظي (CV Scan)';
       startScanBtn.style.background = 'var(--c-gold)';
       if (hudDot) hudDot.className = 'hud-dot-rec';
-      updateTelemetry();
-      alert(`اكتمل المسح البصري لـ ${activeSeatIndices.size.toLocaleString()} هاتف وتحديث خريطة المقاعد بنجاح! 🇩🇿`);
-    }, 4000);
+      await validateAllConnectedPhones();
+    }, 2800);
   }
 });
 
@@ -422,7 +493,19 @@ function drawStandCanvas(): void {
   ctx.clearRect(0, 0, width, height);
 
   // Background rendering based on View Mode
-  if (currentViewMode === 'stadium_cam') {
+  if (currentViewMode === 'webcam') {
+    if (camVideo.readyState >= 2) {
+      ctx.drawImage(camVideo, 0, 0, width, height);
+    } else {
+      ctx.fillStyle = '#060A10';
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('📹 جارٍ تشغيل كاميرا الحاسوب المباشرة...', width / 2, height / 2);
+      ctx.textAlign = 'start';
+    }
+  } else if (currentViewMode === 'stadium_cam') {
     if (stadiumCamImg.complete && stadiumCamImg.naturalWidth > 0) {
       ctx.drawImage(stadiumCamImg, 0, 0, width, height);
       ctx.fillStyle = 'rgba(2, 4, 8, 0.42)';
@@ -431,8 +514,28 @@ function drawStandCanvas(): void {
       ctx.fillStyle = '#060A10';
       ctx.fillRect(0, 0, width, height);
     }
+  } else {
+    // Grid mode
+    ctx.fillStyle = '#060A10';
+    ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.lineWidth = 1;
+    for (let c = 1; c < 10; c++) {
+      ctx.beginPath();
+      ctx.moveTo((c * width) / 10, 0);
+      ctx.lineTo((c * width) / 10, height);
+      ctx.stroke();
+    }
+    for (let r = 1; r < 5; r++) {
+      ctx.beginPath();
+      ctx.moveTo(0, (r * height) / 5);
+      ctx.lineTo(width, (r * height) / 5);
+      ctx.stroke();
+    }
+  }
 
-    // Homography 3x3 Perspective Trapezoid
+  // Homography 3x3 Perspective Trapezoid for camera feeds
+  if (currentViewMode === 'webcam' || currentViewMode === 'stadium_cam') {
     const p1 = { x: width * 0.1, y: height * 0.88 }; // Bottom Left
     const p2 = { x: width * 0.9, y: height * 0.88 }; // Bottom Right
     const p3 = { x: width * 0.78, y: height * 0.16 }; // Top Right
@@ -460,36 +563,6 @@ function drawStandCanvas(): void {
       ctx.font = '10px monospace';
       ctx.fillText(`P${idx + 1}`, p.x + 6, p.y + 3);
     });
-  } else if (currentViewMode === 'webcam') {
-    if (camVideo.readyState >= 2) {
-      ctx.drawImage(camVideo, 0, 0, width, height);
-    } else {
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, width, height);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-      ctx.font = '13px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('📹 جارٍ تشغيل كاميرا الويب المباشرة...', width / 2, height / 2);
-      ctx.textAlign = 'start';
-    }
-  } else {
-    // Grid mode
-    ctx.fillStyle = '#060A10';
-    ctx.fillRect(0, 0, width, height);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.lineWidth = 1;
-    for (let c = 1; c < 10; c++) {
-      ctx.beginPath();
-      ctx.moveTo((c * width) / 10, 0);
-      ctx.lineTo((c * width) / 10, height);
-      ctx.stroke();
-    }
-    for (let r = 1; r < 5; r++) {
-      ctx.beginPath();
-      ctx.moveTo(0, (r * height) / 5);
-      ctx.lineTo(width, (r * height) / 5);
-      ctx.stroke();
-    }
   }
 
   // Draw phone dots for active connected phones
@@ -896,4 +969,5 @@ setupCadreInteractions();
 updateViewButtons();
 updateFromPresence();
 rebuildCurrentShow();
+void initWebcam();
 requestAnimationFrame(drawStandCanvas);

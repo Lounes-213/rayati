@@ -37,16 +37,41 @@ function devApiEndpoints(): Plugin {
             req.on('end', () => {
               try {
                 const data = JSON.parse(body || '{}');
+                const action = data.action || 'heartbeat';
+
+                if (action === 'validate') {
+                  const targetIds = Array.isArray(data.deviceIds) ? data.deviceIds : [];
+                  const validateAll = Boolean(data.validateAll);
+                  let validatedCount = 0;
+                  for (const [id, dev] of presenceMap.entries()) {
+                    if (validateAll || targetIds.includes(id)) {
+                      (dev as { validated?: boolean }).validated = true;
+                      if (data.seat) (dev as { seat?: unknown }).seat = data.seat;
+                      validatedCount++;
+                    }
+                  }
+                  return res.end(JSON.stringify({ ok: true, validatedCount }));
+                }
+
                 const deviceId = String(data.deviceId || '').trim();
+                let devEntry: { deviceId: string; seat: unknown; userAgent: string; lastSeen: number; validated?: boolean } | undefined;
                 if (deviceId) {
-                  presenceMap.set(deviceId, {
+                  const existing = presenceMap.get(deviceId) as { deviceId: string; seat: unknown; userAgent: string; lastSeen: number; validated?: boolean } | undefined;
+                  devEntry = {
                     deviceId,
-                    seat: data.seat || null,
+                    seat: data.seat || existing?.seat || null,
                     userAgent: req.headers['user-agent'] || 'DevDevice',
                     lastSeen: Date.now(),
-                  });
+                    validated: Boolean(existing?.validated || data.validated || false),
+                  };
+                  presenceMap.set(deviceId, devEntry);
                 }
-                res.end(JSON.stringify({ ok: true, activeCount: presenceMap.size }));
+                res.end(JSON.stringify({
+                  ok: true,
+                  validated: devEntry?.validated || false,
+                  seat: devEntry?.seat || null,
+                  activeCount: presenceMap.size,
+                }));
               } catch {
                 res.statusCode = 400;
                 res.end(JSON.stringify({ error: 'invalid json' }));

@@ -1,10 +1,11 @@
-import type { SeatSelection } from '../core/types';
+import type { SeatSelection, ShowFile } from '../core/types';
 
 export interface PresenceDevice {
   deviceId: string;
   seat: SeatSelection | null;
   userAgent?: string;
   lastSeen: number;
+  validated?: boolean;
 }
 
 export interface PresenceResponse {
@@ -26,10 +27,26 @@ export function getDeviceId(): string {
 const localChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('rayati_presence') : null;
 
 /**
- * Starts automatic presence heartbeat for this phone.
+ * Starts automatic presence heartbeat for this phone, and listens for camera confirmation.
  */
-export function startPresenceHeartbeat(getSeat: () => SeatSelection | null | undefined): () => void {
+export function startPresenceHeartbeat(
+  getSeat: () => SeatSelection | null | undefined,
+  onValidated?: (seat: SeatSelection) => void,
+): () => void {
   const deviceId = getDeviceId();
+  let isAlreadyValidated = false;
+
+  // Listen to instant local validation channel (for multi-tab / local tests)
+  localChannel?.addEventListener('message', (ev) => {
+    if (ev.data?.type === 'validate_phone') {
+      if (ev.data.validateAll || ev.data.deviceId === deviceId) {
+        if (!isAlreadyValidated && ev.data.seat) {
+          isAlreadyValidated = true;
+          onValidated?.(ev.data.seat);
+        }
+      }
+    }
+  });
 
   const sendHeartbeat = async () => {
     const seat = getSeat() || null;
@@ -37,6 +54,7 @@ export function startPresenceHeartbeat(getSeat: () => SeatSelection | null | und
       deviceId,
       seat,
       lastSeen: Date.now(),
+      validated: isAlreadyValidated,
     };
 
     // 1. Fast local lane for multi-tab testing
@@ -48,23 +66,67 @@ export function startPresenceHeartbeat(getSeat: () => SeatSelection | null | und
 
     // 2. Global Cloudflare API for real mobile phones on 4G / Wi-Fi
     try {
-      await fetch('/api/presence', {
+      const res = await fetch('/api/presence', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(payload),
       });
+      if (res.ok) {
+        const data = (await res.json()) as { validated?: boolean; seat?: SeatSelection };
+        if (data.validated && !isAlreadyValidated && data.seat) {
+          isAlreadyValidated = true;
+          onValidated?.(data.seat);
+        }
+      }
     } catch {
       // offline / stadium network loss tolerated
     }
   };
 
-  // Immediate ping then repeat every 4 seconds
+  // Immediate ping then repeat every 2.5 seconds
   void sendHeartbeat();
-  const timer = setInterval(() => void sendHeartbeat(), 4000);
+  const timer = setInterval(() => void sendHeartbeat(), 2500);
 
   return () => {
     clearInterval(timer);
   };
+}
+
+/**
+ * Validates devices from Admin (Camera detected phones).
+ */
+export async function validateDevicesFromAdmin(
+  deviceIds?: string[],
+  validateAll = true,
+  seat?: SeatSelection,
+): Promise<void> {
+  // Broadcast locally
+  try {
+    localChannel?.postMessage({
+      type: 'validate_phone',
+      validateAll,
+      deviceIds,
+      seat,
+    });
+  } catch {
+    // ignore
+  }
+
+  // Send to Cloudflare API
+  try {
+    await fetch('/api/presence', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        action: 'validate',
+        validateAll,
+        deviceIds,
+        seat,
+      }),
+    });
+  } catch {
+    // network fallback
+  }
 }
 
 /**
@@ -82,4 +144,33 @@ export async function fetchLivePresence(): Promise<PresenceResponse> {
     // network failure fallback
   }
   return { count: 0, devices: [], now: Date.now() };
+}
+
+/**
+ * Fetches the active programmed tifo show from the server or local storage.
+ */
+export async function fetchProgrammedShow(): Promise<{ title: string; show: ShowFile | null }> {
+  try {
+    const res = await fetch('/api/show', { headers: { 'cache-control': 'no-store' } });
+    if (res.ok) {
+      const data = (await res.json()) as { title?: string; tifo?: string; show?: ShowFile };
+      if (data.show) {
+        return { title: data.title || 'تيفو الدخلة الوطنية 🇩🇿', show: data.show };
+      }
+    }
+  } catch {
+    // fallback
+  }
+
+  try {
+    const raw = localStorage.getItem('rayati_active_show');
+    if (raw) {
+      const show = JSON.parse(raw) as ShowFile;
+      return { title: show.meta.name || 'تيفو راياتي 🇩🇿', show };
+    }
+  } catch {
+    // fallback
+  }
+
+  return { title: 'علم الجزائر الوطني 🇩🇿', show: null };
 }

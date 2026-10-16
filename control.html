@@ -269,11 +269,11 @@
             </p>
           </div>
           <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-            <button type="button" class="btn btn--primary btn--sm" id="btnStadiumCam">
-              🏟️ كاميرا الملعب (Direct)
+            <button type="button" class="btn btn--primary btn--sm" id="btnWebcam">
+              📹 كاميرا الحاسوب (PC Webcam)
             </button>
-            <button type="button" class="btn btn--secondary btn--sm" id="btnWebcam">
-              📹 كاميرا الويب الحقيقية
+            <button type="button" class="btn btn--secondary btn--sm" id="btnStadiumCam">
+              🏟️ كاميرا الملعب (Direct)
             </button>
             <button type="button" class="btn btn--secondary btn--sm" id="btnGrid">
               🗺️ مخطط المدرج
@@ -306,20 +306,23 @@
           <canvas id="standCanvas" class="stand-canvas"></canvas>
           <div class="canvas-hud-badge">
             <span class="hud-dot-rec" id="hudDot"></span>
-            <span id="canvasHudText">REAL LIVE · 0 PHONES CONNECTED</span>
+            <span id="canvasHudText">LIVE WEBCAM · 0 PHONES DETECTED</span>
           </div>
         </div>
 
         <!-- In-Browser Optical CV Scanner & Helpers -->
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button type="button" class="btn btn--primary btn--sm" id="startScanBtn" style="background: var(--c-gold); color: #000;">
-            ⚡ مسح ضوئي لحظي وتحديث الهواتف (In-Browser CV)
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+          <button type="button" class="btn btn--primary btn--sm" id="validateAllBtn" style="background: var(--c-green-bright); color: #000; font-weight: 800;">
+            ⚡ تأكيد وتثبيت الهواتف المكتشفة (Valider)
+          </button>
+          <button type="button" class="btn btn--secondary btn--sm" id="startScanBtn" style="background: var(--c-gold); color: #000;">
+            🔍 مسح بصري لحظي (CV Scan)
           </button>
           <button type="button" class="btn btn--secondary btn--sm" id="resetCadreBtn">
-            ↺ إعادة ضبط الإطار
+            ↺ ضبط الإطار
           </button>
           <button type="button" class="btn btn--secondary btn--sm" id="refreshPresenceBtn">
-            🔄 تحديث الاتصال الآن
+            🔄 تحديث
           </button>
         </div>
 
@@ -330,7 +333,7 @@
             <span style="color: var(--c-gold); font-family: var(--font-num);" id="cadreStatsDetail">0 هاتف داخل الإطار</span>
           </div>
           <p class="muted" style="margin: 0; font-size: 11px;">
-            الهواتف المتصلة الحقيقية تظهر بنقاط ذهبية مضيئة وتتلقى التيفو أو الصورة المخصصة فورياً.
+            الهواتف المكتشفة والمثبتة تظهر بنقاط ذهبية مضيئة داخل الإطار المحدد وتتلقى التيفو فورياً.
           </p>
         </div>
 
@@ -340,7 +343,9 @@
             <span style="font-size: 12px; font-weight: 700; color: #fff;">
               📱 قائمة الهواتف الحقيقية المتصلة مباشرة (<span id="devicesListCount">0</span>) :
             </span>
-            <span class="muted" style="font-size: 11px;">Auto-sync 2.5s</span>
+            <button type="button" class="btn btn--ghost btn--sm" id="quickValidateBtn" style="font-size: 11px; padding: 2px 8px; color: var(--c-green-bright);">
+              ⚡ تثبيت الكل
+            </button>
           </div>
           <div id="devicesContainer" style="display: flex; flex-direction: column; gap: 6px; max-height: 140px; overflow-y: auto;">
             <div class="device-item" style="color: var(--c-text-muted); justify-content: center;">

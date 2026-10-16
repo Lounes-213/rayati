@@ -1,14 +1,16 @@
 import { CALIBRATION } from '../../core/config';
 import { encodeCode } from '../../domain/grayCode';
+import { startPresenceHeartbeat } from '../../services/presenceClient';
 import type { AppContext, ScreenFactory } from '../app';
 import { el } from '../dom';
 
 /**
- * Phase 2 — Optical Calibration mode with instant green confirmation & haptics.
- * The phone flashes [start bit][Gray seat][parity] at 4 bits/s.
- * Once scanned (or after 2 cycles / 6 seconds), the screen turns vibrant emerald green,
- * triggers haptic vibration and an uplifting audio chime, giving supporters
- * the perceived real-time "Connected!" sensation.
+ * Screen 2 — Optical Calibration via Gray Code flashing.
+ * - ZERO user phone camera: phones only display flashing optical codes.
+ * - The phone blinks Gray Code and sends continuous heartbeats.
+ * - When the stadium PC camera / admin detects and validates the phone,
+ *   it triggers an emerald green flash, haptic vibration, celebratory chime,
+ *   and transitions to the synchronized show screen.
  */
 export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
   const { i18n, state } = ctx;
@@ -19,78 +21,51 @@ export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
   const screen = el('section', { class: 'flash', attrs: { 'data-screen': 'calibrate' } });
   const bitLayer = el('div', { class: 'flash__bit' });
 
-  // Progress bar element
-  const progressBar = el('div', { class: 'progress__bar', attrs: { style: 'width: 0%' } });
-  const progressTrack = el('div', { class: 'progress__track', attrs: { style: 'margin-block: 8px;' } }, progressBar);
-
-  const phoneCamVideo = el('video', {
+  // Progress pulse animation ring
+  const radarWave = el('div', {
     attrs: {
-      autoplay: 'true',
-      playsinline: 'true',
-      muted: 'true',
-      style: 'position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; z-index: 0;',
-    },
-  }) as HTMLVideoElement;
-  let phoneCamStream: MediaStream | null = null;
-
-  const togglePhoneCamBtn = el('button', {
-    class: 'btn btn--secondary btn--sm btn--block',
-    text: '📷 فتح كاميرا الهاتف المباشرة',
-    attrs: { type: 'button', style: 'margin-top: 6px;' },
-    on: {
-      click: async () => {
-        if (phoneCamStream) {
-          phoneCamStream.getTracks().forEach((t) => t.stop());
-          phoneCamStream = null;
-          phoneCamVideo.style.display = 'none';
-          bitLayer.style.opacity = '1';
-          togglePhoneCamBtn.textContent = '📷 فتح كاميرا الهاتف المباشرة';
-          return;
-        }
-        try {
-          let s: MediaStream;
-          try {
-            s = await navigator.mediaDevices.getUserMedia({
-              video: { facingMode: { ideal: 'environment' } },
-            });
-          } catch {
-            s = await navigator.mediaDevices.getUserMedia({ video: true });
-          }
-          phoneCamStream = s;
-          phoneCamVideo.srcObject = s;
-          phoneCamVideo.style.display = 'block';
-          bitLayer.style.opacity = '0.35';
-          void phoneCamVideo.play();
-          togglePhoneCamBtn.textContent = '⏹️ إيقاف كاميرا الهاتف';
-        } catch {
-          alert('تعذر فتح الكاميرا، يرجى منح الإذن في المتصفح.');
-        }
-      },
+      style:
+        'width: 54px; height: 54px; border-radius: 50%; border: 3px solid var(--c-gold); margin: 0 auto; animation: pulse-radar 1.5s infinite ease-out;',
     },
   });
 
   // Active calibration HUD
   const hud = el(
     'div',
-    { class: 'flash__hud stack' },
-    el('div', { class: 'card__title', text: t('calibrate.title') }),
-    el('p', { text: t('calibrate.lead') }),
-    el('div', { class: 'flash__code', text: code.bits.join('') }),
-    el('div', { class: 'num', text: `${t('calibrate.seat')} #${seatIndex}` }),
-    progressTrack,
-    el('div', { class: 'muted', text: t('calibrate.scanning') }),
-    togglePhoneCamBtn,
+    { class: 'flash__hud stack', attrs: { style: 'max-width: 380px; text-align: center;' } },
+    radarWave,
+    el('div', {
+      class: 'card__title',
+      text: '📡 كاميرا المنصة تقوم بمسح المدرج...',
+      attrs: { style: 'color: #fff; font-size: 1.15rem; margin-top: 8px;' },
+    }),
+    el('p', {
+      text: 'ارفع هاتفك أمامك ووجه الشاشة نحو الميدان لتلتقط كاميرا المنصة موقعك تلقائياً عبر شفرة غراي.',
+      attrs: { style: 'font-size: 0.85rem; color: rgba(255,255,255,0.8); line-height: 1.4;' },
+    }),
+    el('div', { class: 'flash__code', text: code.bits.join(' ') }),
+    el(
+      'div',
+      {
+        attrs: {
+          style:
+            'display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.8rem; color: var(--c-gold); font-family: var(--font-num); background: rgba(0,0,0,0.5); padding: 6px 12px; border-radius: var(--r-full); border: 1px solid rgba(212,175,55,0.3);',
+        },
+      },
+      el('span', { class: 'pill__dot', attrs: { style: 'background: var(--c-gold); box-shadow: 0 0 8px var(--c-gold);' } }),
+      'بانتظار تأكيد كاميرا المنصة (Live CV)',
+    ),
     el('button', {
       class: 'btn btn--secondary btn--sm btn--block',
-      text: t('calibrate.stop'),
-      attrs: { type: 'button', style: 'margin-top: 4px;' },
-      on: { click: () => ctx.go('ready') },
+      text: '✕ إلغاء والعودة للرئيسية',
+      attrs: { type: 'button', style: 'margin-top: 10px;' },
+      on: { click: () => ctx.go('welcome') },
     }),
   );
 
   // Success Confirmation HUD (Emerald Green Confirmation)
   const checkSvg = `
-    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin: 0 auto; display: block; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));">
+    <svg width="68" height="68" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin: 0 auto; display: block; filter: drop-shadow(0 4px 16px rgba(0,0,0,0.4));">
       <circle cx="32" cy="32" r="30" fill="#D4AF37" stroke="#FFFFFF" stroke-width="3"/>
       <path d="M20 32.5L28.5 41L44 24" stroke="#05070A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
@@ -98,42 +73,58 @@ export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
 
   const seatSummaryMeta = el('span', {
     class: 'seat-summary__meta num',
-    attrs: { style: 'color: #fff; font-weight: 700;' },
-    text: state.seat ? `${state.seat.section} · ${t('seat.row')} ${state.seat.row} · ${t('seat.number')} ${state.seat.seat}` : `#${seatIndex}`,
+    attrs: { style: 'color: #fff; font-weight: 700; font-size: 1.05rem;' },
+    text: state.seat
+      ? `${state.seat.section} · ${t('seat.row')} ${state.seat.row} · ${t('seat.number')} ${state.seat.seat}`
+      : 'المدرج العام',
   });
 
   const successHud = el(
     'div',
-    { class: 'flash__hud stack hidden', attrs: { style: 'max-width: 36ch; text-align: center; border-color: rgba(212, 175, 55, 0.5); box-shadow: 0 16px 40px rgba(0,0,0,0.7);' } },
+    {
+      class: 'flash__hud stack hidden',
+      attrs: {
+        style:
+          'max-width: 360px; text-align: center; border-color: rgba(212, 175, 55, 0.6); box-shadow: 0 20px 50px rgba(0,0,0,0.8); background: rgba(5,7,10,0.92);',
+      },
+    },
     el('div', { html: checkSvg }),
-    el('h2', { class: 'card__title', text: t('calibrate.successTitle'), attrs: { style: 'color: #D4AF37; font-size: 1.25rem; margin-top: 8px;' } }),
-    el('p', { text: t('calibrate.successLead'), attrs: { style: 'color: rgba(255,255,255,0.85); font-size: 0.85rem;' } }),
+    el('h2', {
+      class: 'card__title',
+      text: '✅ تم التعرف وتأكيد المقعد بنجاح 🇩🇿',
+      attrs: { style: 'color: #D4AF37; font-size: 1.25rem; margin-top: 8px;' },
+    }),
+    el('p', {
+      text: 'التقطت كاميرا المنصة إشارة هاتفك بدقة، وأصبح جهازك بكسلاً نشطاً في التيفو المتزامن.',
+      attrs: { style: 'color: rgba(255,255,255,0.85); font-size: 0.85rem;' },
+    }),
     el(
       'div',
-      { class: 'seat-summary', attrs: { style: 'background: rgba(0,0,0,0.6); justify-content: center; border-color: rgba(212,175,55,0.35); padding: 8px 14px;' } },
+      {
+        class: 'seat-summary',
+        attrs: {
+          style:
+            'background: rgba(10,125,62,0.25); justify-content: center; border-color: rgba(18,194,98,0.4); padding: 10px 16px; margin-block: 8px;',
+        },
+      },
       seatSummaryMeta,
     ),
     el('button', {
       class: 'btn btn--primary btn--lg btn--block',
-      text: t('calibrate.continue'),
-      attrs: { type: 'button', style: 'margin-top: 10px; background: #D4AF37; color: #05070A; font-weight: 700;' },
+      text: 'المتابعة إلى شاشة التيفو المتزامن 🚀',
+      attrs: { type: 'button', style: 'background: #D4AF37; color: #05070A; font-weight: 800; padding: 12px;' },
       on: { click: () => ctx.go('ready') },
-    }),
-    el('button', {
-      class: 'btn btn--secondary btn--sm btn--block',
-      text: t('welcome.changeSeat'),
-      attrs: { type: 'button', style: 'margin-top: 4px;' },
-      on: { click: () => ctx.go('seat') },
     }),
   );
 
-  screen.append(phoneCamVideo, bitLayer, hud, successHud);
+  screen.append(bitLayer, hud, successHud);
 
   let raf = 0;
   let start = 0;
   const cycleMs = code.bits.length * CALIBRATION.bitMs + CALIBRATION.gapMs;
-  const targetDurationMs = cycleMs * 2; // 2 full optical cycles (~6 seconds)
   let isCompleted = false;
+  let stopHeartbeat: (() => void) | null = null;
+  let autoNavigateTimer = 0;
 
   function playSuccessFeedback(): void {
     // 1. Haptic vibration
@@ -166,7 +157,7 @@ export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
         };
         playTone(523.25, 0.0, 0.18); // C5
         playTone(659.25, 0.12, 0.22); // E5
-        playTone(783.99, 0.26, 0.40); // G5
+        playTone(783.99, 0.26, 0.4); // G5
       }
     } catch {
       // Audio not permitted or unsupported, continue silently
@@ -174,11 +165,12 @@ export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
   }
 
   function showSuccess(): void {
+    if (isCompleted) return;
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
     isCompleted = true;
 
-    // If no seat was previously selected, lock an auto-allocated seat from camera homography
+    // Fallback seat if needed
     if (!state.seat) {
       const cached = ctx.seats.cached();
       if (cached) {
@@ -199,18 +191,16 @@ export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
     successHud.classList.remove('hidden');
 
     playSuccessFeedback();
+
+    // Auto-proceed to ready screen after 3.5 seconds
+    autoNavigateTimer = window.setTimeout(() => {
+      ctx.go('ready');
+    }, 3500);
   }
 
   function loop(): void {
+    if (isCompleted) return;
     const elapsed = performance.now() - start;
-
-    if (elapsed >= targetDurationMs && !isCompleted) {
-      showSuccess();
-      return;
-    }
-
-    const progress = Math.min(100, Math.round((elapsed / targetDurationMs) * 100));
-    progressBar.style.width = `${progress}%`;
 
     const position = elapsed % cycleMs;
     const inCode = position < code.bits.length * CALIBRATION.bitMs;
@@ -228,10 +218,19 @@ export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
     bitLayer.classList.remove('flash__bit--on');
     hud.classList.remove('hidden');
     successHud.classList.add('hidden');
-    progressBar.style.width = '0%';
 
     start = performance.now();
     raf = requestAnimationFrame(loop);
+
+    // Continuous presence heartbeat listening for PC camera validation
+    stopHeartbeat?.();
+    stopHeartbeat = startPresenceHeartbeat(
+      () => state.seat,
+      (validatedSeat) => {
+        state.seat = validatedSeat;
+        showSuccess();
+      },
+    );
   }
 
   return {
@@ -245,10 +244,9 @@ export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
     onExit() {
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
-      if (phoneCamStream) {
-        phoneCamStream.getTracks().forEach((t) => t.stop());
-        phoneCamStream = null;
-      }
+      if (autoNavigateTimer) clearTimeout(autoNavigateTimer);
+      stopHeartbeat?.();
+      stopHeartbeat = null;
       void ctx.wakeLock.release();
     },
   };
