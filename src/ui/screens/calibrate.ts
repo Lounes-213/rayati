@@ -23,6 +23,52 @@ export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
   const progressBar = el('div', { class: 'progress__bar', attrs: { style: 'width: 0%' } });
   const progressTrack = el('div', { class: 'progress__track', attrs: { style: 'margin-block: 8px;' } }, progressBar);
 
+  const phoneCamVideo = el('video', {
+    attrs: {
+      autoplay: 'true',
+      playsinline: 'true',
+      muted: 'true',
+      style: 'position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; z-index: 0;',
+    },
+  }) as HTMLVideoElement;
+  let phoneCamStream: MediaStream | null = null;
+
+  const togglePhoneCamBtn = el('button', {
+    class: 'btn btn--secondary btn--sm btn--block',
+    text: '📷 فتح كاميرا الهاتف المباشرة',
+    attrs: { type: 'button', style: 'margin-top: 6px;' },
+    on: {
+      click: async () => {
+        if (phoneCamStream) {
+          phoneCamStream.getTracks().forEach((t) => t.stop());
+          phoneCamStream = null;
+          phoneCamVideo.style.display = 'none';
+          bitLayer.style.opacity = '1';
+          togglePhoneCamBtn.textContent = '📷 فتح كاميرا الهاتف المباشرة';
+          return;
+        }
+        try {
+          let s: MediaStream;
+          try {
+            s = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: { ideal: 'environment' } },
+            });
+          } catch {
+            s = await navigator.mediaDevices.getUserMedia({ video: true });
+          }
+          phoneCamStream = s;
+          phoneCamVideo.srcObject = s;
+          phoneCamVideo.style.display = 'block';
+          bitLayer.style.opacity = '0.35';
+          void phoneCamVideo.play();
+          togglePhoneCamBtn.textContent = '⏹️ إيقاف كاميرا الهاتف';
+        } catch {
+          alert('تعذر فتح الكاميرا، يرجى منح الإذن في المتصفح.');
+        }
+      },
+    },
+  });
+
   // Active calibration HUD
   const hud = el(
     'div',
@@ -33,10 +79,11 @@ export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
     el('div', { class: 'num', text: `${t('calibrate.seat')} #${seatIndex}` }),
     progressTrack,
     el('div', { class: 'muted', text: t('calibrate.scanning') }),
+    togglePhoneCamBtn,
     el('button', {
       class: 'btn btn--secondary btn--sm btn--block',
       text: t('calibrate.stop'),
-      attrs: { type: 'button', style: 'margin-top: 8px;' },
+      attrs: { type: 'button', style: 'margin-top: 4px;' },
       on: { click: () => ctx.go('ready') },
     }),
   );
@@ -80,7 +127,7 @@ export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
     }),
   );
 
-  screen.append(bitLayer, hud, successHud);
+  screen.append(phoneCamVideo, bitLayer, hud, successHud);
 
   let raf = 0;
   let start = 0;
@@ -198,6 +245,10 @@ export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
     onExit() {
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
+      if (phoneCamStream) {
+        phoneCamStream.getTracks().forEach((t) => t.stop());
+        phoneCamStream = null;
+      }
       void ctx.wakeLock.release();
     },
   };

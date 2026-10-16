@@ -20,7 +20,9 @@ const seats = prepareSeats(seatsJson as never);
 const standCanvas = document.getElementById('standCanvas') as HTMLCanvasElement;
 const previewCanvas = document.getElementById('previewCanvas') as HTMLCanvasElement;
 const camVideo = document.getElementById('camVideo') as HTMLVideoElement;
-const viewToggleBtn = document.getElementById('viewToggleBtn') as HTMLButtonElement;
+const btnStadiumCam = document.getElementById('btnStadiumCam') as HTMLButtonElement;
+const btnWebcam = document.getElementById('btnWebcam') as HTMLButtonElement;
+const btnGrid = document.getElementById('btnGrid') as HTMLButtonElement;
 const startScanBtn = document.getElementById('startScanBtn') as HTMLButtonElement;
 const resetCadreBtn = document.getElementById('resetCadreBtn') as HTMLButtonElement;
 const refreshPresenceBtn = document.getElementById('refreshPresenceBtn') as HTMLButtonElement;
@@ -54,8 +56,12 @@ const imageFileInput = document.getElementById('imageFileInput') as HTMLInputEle
 const outsideModeSelect = document.getElementById('outsideModeSelect') as HTMLSelectElement;
 
 // State: Real Data 100% by default!
+type ViewMode = 'stadium_cam' | 'webcam' | 'grid';
+let currentViewMode: ViewMode = 'stadium_cam';
+const stadiumCamImg = new Image();
+stadiumCamImg.src = '/images/stadium_tifo_night.png';
+
 let isSimulationMode = false;
-let isCameraView = false;
 let cameraStream: MediaStream | null = null;
 let isScanning = false;
 let currentOutsideMode: OutsideCadreMode = 'black';
@@ -325,36 +331,62 @@ resetCadreBtn?.addEventListener('click', () => {
   rebuildCurrentShow();
 });
 
-// View Toggle: Stadium Grid vs Camera
-async function toggleView(): Promise<void> {
-  isCameraView = !isCameraView;
-  if (isCameraView) {
-    viewToggleBtn.textContent = '🗺️ مخطط المدرج';
-    camVideo.style.display = 'block';
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 } },
-      });
-      cameraStream = stream;
-      camVideo.srcObject = stream;
-      if (canvasHudText) canvasHudText.textContent = 'STAND CAM · 1080p FEED';
-    } catch {
-      camVideo.style.display = 'none';
-      isCameraView = false;
-      viewToggleBtn.textContent = '📹 الكاميرا';
-      alert('لم يتم العثور على كاميرا أو تعذر الحصول على الإذن. استمرار وضع مخطط المدرج.');
+// View Mode Controls: Stadium Cam vs Webcam vs Digital Grid
+function updateViewButtons(): void {
+  if (btnStadiumCam) btnStadiumCam.className = currentViewMode === 'stadium_cam' ? 'btn btn--primary btn--sm' : 'btn btn--secondary btn--sm';
+  if (btnWebcam) btnWebcam.className = currentViewMode === 'webcam' ? 'btn btn--primary btn--sm' : 'btn btn--secondary btn--sm';
+  if (btnGrid) btnGrid.className = currentViewMode === 'grid' ? 'btn btn--primary btn--sm' : 'btn btn--secondary btn--sm';
+
+  if (canvasHudText) {
+    if (currentViewMode === 'stadium_cam') {
+      canvasHudText.textContent = `STAND CAM 01 · 1080p 30 FPS · ACTIVE`;
+    } else if (currentViewMode === 'webcam') {
+      canvasHudText.textContent = `LIVE WEBCAM · 1080p 30 FPS · ACTIVE`;
+    } else {
+      canvasHudText.textContent = `STADIUM GRID · SEAT MAP`;
     }
-  } else {
-    viewToggleBtn.textContent = '📹 الكاميرا';
-    camVideo.style.display = 'none';
-    if (cameraStream) {
-      cameraStream.getTracks().forEach((t) => t.stop());
-      cameraStream = null;
-    }
-    if (canvasHudText) canvasHudText.textContent = `STADIUM GRID · ${activeSeatIndices.size} PHONES`;
   }
 }
-viewToggleBtn?.addEventListener('click', () => void toggleView());
+
+btnStadiumCam?.addEventListener('click', () => {
+  currentViewMode = 'stadium_cam';
+  if (cameraStream) {
+    cameraStream.getTracks().forEach((t) => t.stop());
+    cameraStream = null;
+  }
+  updateViewButtons();
+});
+
+btnWebcam?.addEventListener('click', async () => {
+  try {
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: { ideal: 'environment' } },
+      });
+    } catch {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    }
+    cameraStream = stream;
+    camVideo.srcObject = stream;
+    await camVideo.play();
+    currentViewMode = 'webcam';
+    updateViewButtons();
+  } catch {
+    alert('تعذر فتح كاميرا الويب. يرجى التأكد من توصيل الكاميرا والسماح بالإذن في المتصفح.');
+    currentViewMode = 'stadium_cam';
+    updateViewButtons();
+  }
+});
+
+btnGrid?.addEventListener('click', () => {
+  currentViewMode = 'grid';
+  if (cameraStream) {
+    cameraStream.getTracks().forEach((t) => t.stop());
+    cameraStream = null;
+  }
+  updateViewButtons();
+});
 
 // In-Browser Optical CV Scanner
 startScanBtn?.addEventListener('click', () => {
@@ -389,12 +421,61 @@ function drawStandCanvas(): void {
 
   ctx.clearRect(0, 0, width, height);
 
-  // Background stadium stands representation
-  if (!isCameraView) {
+  // Background rendering based on View Mode
+  if (currentViewMode === 'stadium_cam') {
+    if (stadiumCamImg.complete && stadiumCamImg.naturalWidth > 0) {
+      ctx.drawImage(stadiumCamImg, 0, 0, width, height);
+      ctx.fillStyle = 'rgba(2, 4, 8, 0.42)';
+      ctx.fillRect(0, 0, width, height);
+    } else {
+      ctx.fillStyle = '#060A10';
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    // Homography 3x3 Perspective Trapezoid
+    const p1 = { x: width * 0.1, y: height * 0.88 }; // Bottom Left
+    const p2 = { x: width * 0.9, y: height * 0.88 }; // Bottom Right
+    const p3 = { x: width * 0.78, y: height * 0.16 }; // Top Right
+    const p4 = { x: width * 0.22, y: height * 0.16 }; // Top Left
+
+    ctx.strokeStyle = isScanning ? '#D21034' : 'rgba(18, 194, 98, 0.85)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 5]);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.lineTo(p3.x, p3.y);
+    ctx.lineTo(p4.x, p4.y);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Corner reference markers
+    [p1, p2, p3, p4].forEach((p, idx) => {
+      ctx.fillStyle = '#D4AF37';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = '10px monospace';
+      ctx.fillText(`P${idx + 1}`, p.x + 6, p.y + 3);
+    });
+  } else if (currentViewMode === 'webcam') {
+    if (camVideo.readyState >= 2) {
+      ctx.drawImage(camVideo, 0, 0, width, height);
+    } else {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('📹 جارٍ تشغيل كاميرا الويب المباشرة...', width / 2, height / 2);
+      ctx.textAlign = 'start';
+    }
+  } else {
+    // Grid mode
     ctx.fillStyle = '#060A10';
     ctx.fillRect(0, 0, width, height);
-
-    // Section grid guidelines
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
     ctx.lineWidth = 1;
     for (let c = 1; c < 10; c++) {
@@ -812,6 +893,7 @@ downloadShowBtn?.addEventListener('click', () => {
 
 // Init
 setupCadreInteractions();
+updateViewButtons();
 updateFromPresence();
 rebuildCurrentShow();
 requestAnimationFrame(drawStandCanvas);
