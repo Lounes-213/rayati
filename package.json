@@ -1,0 +1,40 @@
+{
+  "name": "rayati",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Rayati (راياتي) — free PWA for stadium crowd light shows. Algerian identity, offline-first, zero running cost.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --port 4173",
+    "typecheck": "tsc -b --force",
+    "lint": "eslint .",
+    "format": "prettier --write \"src/**/*.{ts,css,json}\" \"tools/**/*.{py,js}\" \"*.{json,md}\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:tests": "vitest run --reporter=verbose",
+    "size": "node tools/size_report.mjs",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build && npm run size",
+    "seats": "node tools/py.mjs tools/generate_seats.py --out public/seats.json",
+    "show": "node tools/py.mjs tools/build_show.py --preset algeria --out public/show.json --preview tools/assets/out/preview.png",
+    "calibrate:test": "node tools/py.mjs tools/test_calibration_pipeline.py"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.15.0",
+    "@types/node": "^22.10.0",
+    "@types/qrcode": "^1.5.6",
+    "eslint": "^9.15.0",
+    "prettier": "^3.4.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.16.0",
+    "vite": "^6.0.0",
+    "vitest": "^3.2.7"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  }
+}

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="Rayati">
+  <rect width="192" height="192" fill="#05070a"/>
+  <g transform="translate(24 40) scale(0.75)">
+    <g>
+      <rect x="0" y="24" width="14" height="14" rx="3" fill="#12C262"/>
+      <rect x="16" y="22" width="14" height="14" rx="3" fill="#0A7D3E"/>
+      <rect x="32" y="19" width="14" height="14" rx="3" fill="#D21034"/>
+      <rect x="48" y="17" width="14" height="14" rx="3" fill="#D21034"/>
+      <rect x="64" y="16" width="14" height="14" rx="3" fill="#FFFFFF"/>
+      <rect x="80" y="16" width="14" height="14" rx="3" fill="#FFFFFF"/>
+      <rect x="96" y="18" width="14" height="14" rx="3" fill="#FFFFFF"/>
+      <rect x="112" y="21" width="14" height="14" rx="3" fill="#DCEEFF"/>
+      <rect x="128" y="25" width="14" height="14" rx="3" fill="#DCEEFF"/>
+
+      <rect x="0" y="48" width="14" height="14" rx="3" fill="#0A7D3E"/>
+      <rect x="16" y="46" width="14" height="14" rx="3" fill="#D21034"/>
+      <rect x="32" y="43" width="14" height="14" rx="3" fill="#D21034"/>
+      <rect x="48" y="41" width="14" height="14" rx="3" fill="#FF3B5C"/>
+      <rect x="64" y="40" width="14" height="14" rx="3" fill="#FFFFFF"/>
+      <rect x="80" y="40" width="14" height="14" rx="3" fill="#FFFFFF"/>
+      <rect x="96" y="42" width="14" height="14" rx="3" fill="#FFFFFF"/>
+      <rect x="112" y="45" width="14" height="14" rx="3" fill="#FFFFFF"/>
+      <rect x="128" y="49" width="14" height="14" rx="3" fill="#DCEEFF"/>
+
+      <rect x="0" y="72" width="14" height="14" rx="3" fill="#12C262"/>
+      <rect x="16" y="70" width="14" height="14" rx="3" fill="#0A7D3E"/>
+      <rect x="32" y="67" width="14" height="14" rx="3" fill="#D21034"/>
+      <rect x="48" y="65" width="14" height="14" rx="3" fill="#FFFFFF"/>
+      <rect x="64" y="64" width="14" height="14" rx="3" fill="#FFFFFF"/>
+      <rect x="80" y="64" width="14" height="14" rx="3" fill="#FFFFFF"/>
+      <rect x="96" y="66" width="14" height="14" rx="3" fill="#DCEEFF"/>
+      <rect x="112" y="69" width="14" height="14" rx="3" fill="#DCEEFF"/>
+      <rect x="128" y="73" width="14" height="14" rx="3" fill="#DCEEFF"/>
+    </g>
+    <rect x="0" y="94" width="142" height="3" rx="1.5" fill="#E8B84B" opacity="0.85"/>
+  </g>
+</svg>

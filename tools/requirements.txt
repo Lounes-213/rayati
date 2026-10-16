@@ -1,0 +1,7 @@
+# Rayati generators — pinned majors, no exotic dependency.
+#   python -m venv .venv
+#   .venv/Scripts/python -m pip install -r tools/requirements.txt   (Windows)
+#   .venv/bin/python -m pip install -r tools/requirements.txt       (macOS/Linux)
+Pillow>=11,<13          # generate_seats previews, build_show image -> palette mapping
+numpy>=2.0,<3           # signal processing in the calibration decoder
+opencv-python-headless>=4.10  # video IO, blob detection, homography (no GUI needed)

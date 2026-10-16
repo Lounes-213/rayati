@@ -1,0 +1,336 @@
+/* Simulation view (desktop): the whole stadium as one colour grid. */
+@import './tokens.css';
+
+.sim-body {
+  margin: 0;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-latin);
+  min-height: 100dvh;
+}
+
+.sim-root {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) 1fr;
+  grid-template-rows: auto 1fr;
+  gap: var(--sp-4);
+  padding: var(--sp-5);
+  min-height: 100dvh;
+}
+
+@media (max-width: 900px) {
+  .sim-root {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sim-header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.sim-title {
+  font-family: var(--font-ar);
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-bold);
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+}
+
+.sim-title span {
+  font-family: var(--font-latin);
+  font-size: var(--fs-tiny);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--c-text-muted);
+}
+
+.sim-panel {
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  height: fit-content;
+}
+
+.sim-panel h2 {
+  font-size: var(--fs-h3);
+  margin: 0;
+}
+
+.sim-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  font-size: var(--fs-tiny);
+  color: var(--c-text-dim);
+}
+
+.sim-field input[type='range'] {
+  width: 100%;
+  accent-color: var(--c-green-bright);
+}
+
+.sim-buttons {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.sim-readout {
+  font-family: var(--font-num);
+  font-size: var(--fs-small);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--sp-1) var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: var(--r-md);
+  background: var(--c-bg-soft);
+  border: 1px solid var(--c-line);
+}
+
+.sim-readout dt {
+  color: var(--c-text-muted);
+}
+
+.sim-readout dd {
+  margin: 0;
+  text-align: right;
+}
+
+.sim-stage {
+  position: relative;
+  overflow: auto;
+  background: #000;
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+  display: grid;
+  place-items: center;
+}
+
+.sim-canvas {
+  image-rendering: pixelated;
+  box-shadow: 0 0 60px rgba(10, 125, 62, 0.25);
+  border-radius: 6px;
+  max-width: 100%;
+}
+
+.sim-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+.sim-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--c-line-strong);
+}
+
+.sim-error {
+  color: var(--c-err);
+  font-size: var(--fs-small);
+}
+
+/* ------------------------------------------------------------------ tabs */
+
+.sim-nav {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: var(--sp-2);
+  border-bottom: 1px solid var(--c-line);
+  padding-bottom: var(--sp-3);
+  margin-bottom: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.sim-tab-btn {
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  color: var(--c-text-dim);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-full);
+  font-family: inherit;
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.sim-tab-btn:hover {
+  background: var(--c-surface-2);
+  color: var(--c-text);
+  border-color: var(--c-line-strong);
+}
+
+.sim-tab-btn[aria-selected='true'] {
+  background: rgba(10, 125, 62, 0.25);
+  border-color: var(--c-green-bright);
+  color: #fff;
+  font-weight: var(--fw-bold);
+}
+
+.sim-tab-pane {
+  display: contents;
+}
+
+.sim-tab-pane.hidden {
+  display: none !important;
+}
+
+/* ------------------------------------------------------------------ 4-phone test */
+
+.test4-container {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.test4-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--sp-4);
+}
+
+.test4-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+.test4-qr-wrap {
+  background: #fff;
+  padding: 10px;
+  border-radius: var(--r-md);
+  display: grid;
+  place-items: center;
+  width: 190px;
+  height: 190px;
+}
+
+.test4-qr-wrap svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.test4-phone-title {
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-small);
+  color: #fff;
+}
+
+.test4-phone-role {
+  font-size: var(--fs-tiny);
+  color: var(--c-text-muted);
+}
+
+/* 4-Phone Virtual Mockup Display */
+.phone-mockups-wrap {
+  display: flex;
+  justify-content: center;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  padding: var(--sp-6) var(--sp-4);
+  background: #000;
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-xl);
+  box-shadow: inset 0 0 40px rgba(0,0,0,0.8);
+}
+
+.mockup-phone {
+  width: 140px;
+  height: 270px;
+  background: #11141a;
+  border: 3px solid #2a313d;
+  border-radius: 28px;
+  padding: 8px;
+  box-shadow: 0 16px 36px rgba(0,0,0,0.8), 0 0 1px 1px rgba(255,255,255,0.1);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.mockup-notch {
+  width: 44px;
+  height: 6px;
+  background: #05070a;
+  border-radius: 4px;
+  margin: 0 auto 6px auto;
+  flex: none;
+}
+
+.mockup-screen {
+  flex: 1;
+  border-radius: 18px;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 8px;
+  transition: background-color 80ms linear;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+  text-align: center;
+}
+
+.mockup-seat-badge {
+  font-family: var(--font-num);
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 6px;
+  backdrop-filter: blur(4px);
+  align-self: center;
+}
+
+.mockup-color-hex {
+  font-family: var(--font-num);
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 6px;
+  backdrop-filter: blur(4px);
+  align-self: center;
+}
+
+/* ------------------------------------------------------------------ studio */
+
+.studio-container {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) 1fr;
+  gap: var(--sp-4);
+}
+
+@media (max-width: 960px) {
+  .studio-container {
+    grid-template-columns: 1fr;
+  }
+}

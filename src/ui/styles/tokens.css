@@ -1,0 +1,125 @@
+/* =========================================================================
+   Rayati design tokens — Algeria in a light show.
+   Dark-first, light theme follows the system. Every value used by the UI
+   comes from here (no magic numbers in components).
+   ========================================================================= */
+:root {
+  /* --- brand palette (Algerian) --- */
+  --c-green: #0a7d3e;
+  --c-green-bright: #12c262;
+  --c-green-deep: #063f20;
+  --c-red: #d21034;
+  --c-red-bright: #ff3b5c;
+  --c-gold: #e8b84b;
+  --c-white: #ffffff;
+
+  /* --- surfaces (dark) --- */
+  --c-bg: #05070a;
+  --c-bg-soft: #090d13;
+  --c-surface: #0e131a;
+  --c-surface-2: #161e29;
+  --c-surface-3: #1e2836;
+  --c-line: rgba(255, 255, 255, 0.1);
+  --c-line-strong: rgba(255, 255, 255, 0.2);
+
+  /* --- text --- */
+  --c-text: #f4f7fa;
+  --c-text-dim: #a9b6c4;
+  --c-text-muted: #7f8d9c;
+  --c-on-accent: #ffffff;
+  --c-on-gold: #14100a;
+
+  /* --- semantic --- */
+  --c-ok: var(--c-green-bright);
+  --c-warn: var(--c-gold);
+  --c-err: #ff5a76;
+  --c-focus: #7ce2a8;
+
+  /* --- spacing scale (4pt grid) --- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 48px;
+  --sp-9: 64px;
+
+  /* --- radii --- */
+  --r-sm: 12px;
+  --r-md: 18px;
+  --r-lg: 26px;
+  --r-xl: 34px;
+  --r-full: 999px;
+
+  /* --- type --- */
+  --font-ar: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, system-ui, sans-serif;
+  --font-latin: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-num: 'Inter', system-ui, sans-serif;
+  --fs-display: clamp(34px, 9vw, 52px);
+  --fs-h1: clamp(26px, 6.4vw, 34px);
+  --fs-h2: clamp(20px, 4.8vw, 24px);
+  --fs-h3: 18px;
+  --fs-body: 17px;
+  --fs-small: 15px;
+  --fs-tiny: 13px;
+  --lh-tight: 1.15;
+  --lh-body: 1.6;
+  --fw-regular: 400;
+  --fw-medium: 600;
+  --fw-bold: 800;
+
+  /* --- motion (all under 300ms) --- */
+  --dur-fast: 120ms;
+  --dur-base: 190ms;
+  --dur-slow: 280ms;
+  --ease: cubic-bezier(0.22, 0.71, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* --- elevation --- */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --shadow-3: 0 24px 64px rgba(0, 0, 0, 0.55);
+  --glow-green: 0 0 0 1px rgba(18, 194, 98, 0.35), 0 12px 40px rgba(10, 125, 62, 0.35);
+  --glow-red: 0 0 0 1px rgba(255, 59, 92, 0.32), 0 12px 40px rgba(210, 16, 52, 0.3);
+
+  /* --- layout --- */
+  --tap: 48px;
+  --tap-lg: 56px;
+  --shell-max: 560px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Light theme follows the system. Contrast ratios stay AA on every surface. */
+@media (prefers-color-scheme: light) {
+  :root {
+    --c-bg: #f6f8f7;
+    --c-bg-soft: #ffffff;
+    --c-surface: #ffffff;
+    --c-surface-2: #f1f4f2;
+    --c-surface-3: #e7ebe8;
+    --c-line: rgba(9, 24, 16, 0.12);
+    --c-line-strong: rgba(9, 24, 16, 0.24);
+    --c-text: #08130d;
+    --c-text-dim: #38505f;
+    --c-text-muted: #5a7080;
+    --c-on-accent: #ffffff;
+    --c-green: #0a6a36;
+    --c-err: #c00d31;
+    --c-focus: #0a6a36;
+    --shadow-2: 0 12px 32px rgba(9, 24, 16, 0.12);
+    --shadow-3: 0 24px 64px rgba(9, 24, 16, 0.16);
+    --glow-green: 0 0 0 1px rgba(10, 106, 54, 0.25), 0 10px 30px rgba(10, 125, 62, 0.18);
+  }
+}
+
+/* Users who prefer less motion get the same information, instantly. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
+}

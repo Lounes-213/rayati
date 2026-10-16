@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+.tmp/
+.venv/
+*.tsbuildinfo
+.DS_Store
+tools/assets/*.mp4
+tools/assets/out/
+# generated calibration artefacts
+corrections.json

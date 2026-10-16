@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>دليل راياتي · RAYATI Guide</title>
+    <meta name="description" content="الدليل التقني والتعليمي الشامل لتيفو راياتي: الرؤية الحاسوبية (Computer Vision)، شفرة غراي (Gray Code)، والهوموجرافيا في الملاعب الجزائرية." />
+    <meta name="theme-color" content="#05070A" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;600;700&display=swap"
+    />
+    <link rel="stylesheet" href="/src/ui/styles/base.css" />
+    <style>
+      .guide-page {
+        min-height: 100vh;
+        background: var(--c-bg);
+        color: var(--c-text);
+        padding-bottom: var(--sp-8);
+      }
+      .guide-hero {
+        position: relative;
+        overflow: hidden;
+        border-radius: 0 0 var(--r-xl) var(--r-xl);
+        background: #000;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+      }
+      .guide-hero__img {
+        width: 100%;
+        height: 320px;
+        object-fit: cover;
+        display: block;
+        opacity: 0.88;
+        mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%);
+        -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%);
+      }
+      .guide-hero__overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: var(--sp-5);
+        background: linear-gradient(to top, var(--c-bg) 8%, transparent 92%);
+      }
+      .guide-container {
+        max-width: 720px;
+        margin: 0 auto;
+        padding-inline: var(--sp-4);
+      }
+      .guide-step-card {
+        margin-top: var(--sp-6);
+        background: var(--c-surface);
+        border: 1px solid var(--c-line-strong);
+        border-radius: var(--r-lg);
+        overflow: hidden;
+        transition: transform var(--dur-base) var(--ease), border-color var(--dur-base) var(--ease);
+      }
+      .guide-step-card:hover {
+        border-color: var(--c-green-bright);
+        transform: translateY(-2px);
+      }
+      .guide-step__img-wrap {
+        width: 100%;
+        height: 250px;
+        overflow: hidden;
+        background: #05070a;
+        position: relative;
+      }
+      .guide-step__img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .guide-step__badge {
+        position: absolute;
+        top: 14px;
+        inset-inline-start: 14px;
+        background: rgba(10, 125, 62, 0.9);
+        backdrop-filter: blur(8px);
+        color: #fff;
+        font-family: var(--font-num);
+        font-weight: 700;
+        padding: 4px 14px;
+        border-radius: var(--r-full);
+        font-size: var(--fs-tiny);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+      .guide-step__body {
+        padding: var(--sp-5);
+      }
+      .guide-step__title {
+        font-size: var(--fs-h3);
+        color: #fff;
+        margin-bottom: var(--sp-2);
+        display: flex;
+        align-items: center;
+        gap: var(--sp-2);
+      }
+      .guide-step__desc {
+        color: var(--c-text-dim);
+        font-size: var(--fs-small);
+        line-height: var(--lh-body);
+      }
+      .guide-nav-bar {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        backdrop-filter: blur(16px);
+        background: rgba(5, 7, 10, 0.85);
+        border-bottom: 1px solid var(--c-line);
+        padding: var(--sp-3) var(--sp-4);
+      }
+      .guide-action-bar {
+        position: sticky;
+        bottom: var(--sp-4);
+        margin-top: var(--sp-8);
+        z-index: 40;
+      }
+      .features-pill-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: var(--sp-3);
+        margin-block: var(--sp-6);
+      }
+      .feature-box {
+        background: var(--c-surface-2);
+        border: 1px solid var(--c-line);
+        border-radius: var(--r-md);
+        padding: var(--sp-3);
+        text-align: center;
+      }
+      .feature-box__icon {
+        font-size: 1.5rem;
+        margin-bottom: 4px;
+      }
+      .feature-box__title {
+        font-size: var(--fs-tiny);
+        font-weight: 700;
+        color: #fff;
+      }
+      .feature-box__sub {
+        font-size: 0.75rem;
+        color: var(--c-text-muted);
+      }
+      .tech-card {
+        background: linear-gradient(135deg, rgba(14, 19, 26, 0.95), rgba(10, 125, 62, 0.12));
+        border: 1px solid rgba(212, 175, 55, 0.4);
+        border-radius: var(--r-lg);
+        padding: var(--sp-5);
+        margin-top: var(--sp-6);
+      }
+      .tech-card__title {
+        color: var(--c-gold);
+        font-size: var(--fs-h3);
+        margin-bottom: var(--sp-2);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .tech-badge-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+      .tech-badge {
+        font-family: var(--font-num);
+        font-size: 0.75rem;
+        background: rgba(0,0,0,0.5);
+        border: 1px solid var(--c-line-strong);
+        padding: 3px 8px;
+        border-radius: 6px;
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body class="guide-page">
+    <header class="guide-nav-bar">
+      <div class="guide-container" style="display: flex; justify-content: space-between; align-items: center;">
+        <a href="/" class="btn btn--ghost btn--sm" style="text-decoration: none;">
+          <span class="ar-text">← العودة للتطبيق</span>
+          <span class="fr-text hidden">← Retour à l'app</span>
+          <span class="en-text hidden">← Back to App</span>
+        </a>
+        <div class="lang">
+          <button type="button" class="lang__btn" data-lang="ar" aria-pressed="true">العربية</button>
+          <button type="button" class="lang__btn" data-lang="fr" aria-pressed="false">Français</button>
+          <button type="button" class="lang__btn" data-lang="en" aria-pressed="false">English</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="guide-hero">
+      <img src="/images/stadium_tifo_night.png" alt="Rayati Stadium Tifo Night" class="guide-hero__img" />
+      <div class="guide-hero__overlay">
+        <div class="guide-container" style="width: 100%;">
+          <span class="badge">
+            <span class="ar-text">الهندسة البصرية للتيفو الرقمي في الجزائر</span>
+            <span class="fr-text hidden">L'Ingénierie Visuelle du Tifo Numérique en Algérie</span>
+            <span class="en-text hidden">The Visual Engineering Behind Rayati Tifo</span>
+          </span>
+          <h1 style="font-size: clamp(1.6rem, 5vw, 2.3rem); margin-top: 8px; color: #fff;">
+            <span class="ar-text">دليل راياتي: كيفاش يخدم التيفو؟</span>
+            <span class="fr-text hidden">Guide Rayati : Comment fonctionne le Tifo ?</span>
+            <span class="en-text hidden">Rayati Guide: How the Stadium Tifo Works</span>
+          </h1>
+          <p class="muted" style="color: rgba(255,255,255,0.85); font-size: var(--fs-small);">
+            <span class="ar-text">بدون ملصقات QR ولا كتابة يدوية: الكاميرا تتعرف على الهواتف بالرؤية الحاسوبية وتوحد المدرجات في دخلة تاريخية.</span>
+            <span class="fr-text hidden">Sans QR sur les sièges ni saisie : la caméra détecte les smartphones par Computer Vision et synchronise le virage.</span>
+            <span class="en-text hidden">No seat stickers or typing required: pitch cameras locate phones via Computer Vision and unite the stadium.</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <main class="guide-container">
+      <div class="features-pill-grid">
+        <div class="feature-box">
+          <div class="feature-box__icon">📹</div>
+          <div class="feature-box__title">
+            <span class="ar-text">رؤية حاسوبية</span>
+            <span class="fr-text hidden">Computer Vision</span>
+            <span class="en-text hidden">Computer Vision</span>
+          </div>
+          <div class="feature-box__sub">
+            <span class="ar-text">كشف تلقائي بالضوء</span>
+            <span class="fr-text hidden">Détection optique</span>
+            <span class="en-text hidden">Optical Detection</span>
+          </div>
+        </div>
+        <div class="feature-box">
+          <div class="feature-box__icon">📶</div>
+          <div class="feature-box__title">
+            <span class="ar-text">100% أوفلاين</span>
+            <span class="fr-text hidden">100% Hors-ligne</span>
+            <span class="en-text hidden">100% Offline</span>
+          </div>
+          <div class="feature-box__sub">
+            <span class="ar-text">يخدم مع انقطاع الشبكة</span>
+            <span class="fr-text hidden">Insensible au réseau</span>
+            <span class="en-text hidden">Zero Cellular Lag</span>
+          </div>
+        </div>
+        <div class="feature-box">
+          <div class="feature-box__icon">🔒</div>
+          <div class="feature-box__title">
+            <span class="ar-text">خصوصية تامة</span>
+            <span class="fr-text hidden">Confidentialité</span>
+            <span class="en-text hidden">Privacy First</span>
+          </div>
+          <div class="feature-box__sub">
+            <span class="ar-text">بدون حساب ولا صور وجوه</span>
+            <span class="fr-text hidden">Aucune image stockée</span>
+            <span class="en-text hidden">No Faces, No Accounts</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 1: Computer Vision & Homography -->
+      <article class="guide-step-card">
+        <div class="guide-step__img-wrap">
+          <img src="/images/computer_vision_homography.png" alt="Computer Vision and Homography Calibration" class="guide-step__img" />
+          <span class="guide-step__badge">الخطوة 01</span>
+        </div>
+        <div class="guide-step__body">
+          <h2 class="guide-step__title">
+            <span>📹</span>
+            <span class="ar-text">1. الكاميرا تتعرف على التيليفون (Computer Vision)</span>
+            <span class="fr-text hidden">1. La Caméra repère ton téléphone (Computer Vision)</span>
+            <span class="en-text hidden">1. Pitch Camera Locates Your Phone (Computer Vision)</span>
+          </h2>
+          <p class="guide-step__desc">
+            <span class="ar-text">
+              في الملاعب الجزائرية، الجماهير تقعد وين تلقى بلاصة فارغة مع صحابها وما يتبعوش رقم التذكرة. لهذا استغنينا على ملصقات الكراسي!
+              بمجرد دخولك للتطبيق، شاشة الهاتف ترمش برمز ثنائي سريع (Gray Code) لمدة 5 ثوانٍ. كاميرا واحدة من المنصة المقابلة تلتقط الرمشات، وبفضل خوارزمية <strong>الهوموجرافيا (Homography)</strong>، البرنامج يصحح الزاوية المائلة للمدرج ويحدد إحداثيات هاتفك في الملعب تلقائياً!
+            </span>
+            <span class="fr-text hidden">
+              Dans nos stades, les supporters s'assoient souvent librement avec leurs amis sans suivre le billet. C'est pourquoi nous avons éliminé les autocollants QR !
+              L'écran clignote avec une séquence <strong>Gray Code</strong> ultra-rapide de 5 secondes. La caméra en tribune opposée capte les pulsations lumineuses, et grâce à la matrice d'<strong>Homographie</strong>, le système projette la tribune inclinée en une grille 2D exacte.
+            </span>
+            <span class="en-text hidden">
+              In stadium culture, supporters sit freely with friends regardless of ticket numbers. That is why physical seat QR stickers are eliminated!
+              Your screen flashes a 5-second temporal <strong>Gray Code</strong> sequence. A camera on the opposite stand detects the light pulses, and via a <strong>Homography Matrix</strong>, maps your phone's exact physical position in the stadium grid.
+            </span>
+          </p>
+        </div>
+      </article>
+
+      <!-- Step 2: Instant Green Confirmation -->
+      <article class="guide-step-card">
+        <div class="guide-step__img-wrap">
+          <img src="/images/phone_calibration_green.png" alt="Phone Screen Green Confirmation with Gold Checkmark" class="guide-step__img" />
+          <span class="guide-step__badge">الخطوة 02</span>
+        </div>
+        <div class="guide-step__body">
+          <h2 class="guide-step__title">
+            <span>🟢</span>
+            <span class="ar-text">2. التأكيد الأخضر اللحظي والاهتزاز</span>
+            <span class="fr-text hidden">2. Validation Verte Instantanée & Haptique</span>
+            <span class="en-text hidden">2. Instant Emerald Green & Haptic Lock</span>
+          </h2>
+          <p class="guide-step__desc">
+            <span class="ar-text">
+              أول ما الكاميرا تؤكد موقع مقعدك، شاشة هاتفك تتحول لحظياً إلى اللون <strong>الأخضر الزمردي الزاهي (#0A7D3E)</strong> مع خاتم ذهبي، رنة نغمة واهتزاز خفيف باليد. هذا التأكيد البصري يعطيك الإحساس الفوري بلي راك متصل بالدخلة ومقعدك موحد مع بقية الفيراج!
+            </span>
+            <span class="fr-text hidden">
+              Dès que la caméra valide ta position, ton écran vire instantanément au <strong>vert émeraude vibrant (#0A7D3E)</strong> orné d'un sceau doré, accompagné d'un bip sonore et d'une vibration haptique. C'est la preuve visuelle immédiate que ton pixel est synchronisé !
+            </span>
+            <span class="en-text hidden">
+              As soon as the camera locks your coordinates, your screen transforms into brilliant <strong>emerald green (#0A7D3E)</strong> with an elegant gold badge, audio chime, and haptic buzz. Instant tangible confirmation that you are dialed into the tifo!
+            </span>
+          </p>
+        </div>
+      </article>
+
+      <!-- Step 3: Raising Phones towards the Pitch -->
+      <article class="guide-step-card">
+        <div class="guide-step__img-wrap">
+          <img src="/images/crowd_wave_silhouettes.png" alt="Crowd silhouettes raising phones forming illuminated wave" class="guide-step__img" />
+          <span class="guide-step__badge">الخطوة 03</span>
+        </div>
+        <div class="guide-step__body">
+          <h2 class="guide-step__title">
+            <span>🇩🇿</span>
+            <span class="ar-text">3. ارفع هاتفك نحو أرضية الميدان</span>
+            <span class="fr-text hidden">3. Lève ton écran face à la pelouse</span>
+            <span class="en-text hidden">3. Hold Your Screen Facing the Pitch</span>
+          </h2>
+          <p class="guide-step__desc">
+            <span class="ar-text">
+              عند الصفر في العد التنازلي ولحظة دخول اللاعبين، ارفع هاتفك أمامك بشاشة مائلة نحو التيران. الآلاف من الهواتف تتبدل ألوانها في نفس المليثانية بدون أي اتصال بالإنترنت، لتصنع لوحة وطنية عملاقة تهز الملعب وتصنع التاريخ!
+            </span>
+            <span class="fr-text hidden">
+              Au coup d'envoi et à la fin du compte à rebours, lève ton smartphone écran face au terrain. Des milliers d'appareils synchronisés changent de teinte à la milliseconde près, formant une immense marée patriotique sans aucune connexion internet requise.
+            </span>
+            <span class="en-text hidden">
+              At countdown zero during team entrance, hold your smartphone high facing the pitch. Thousands of phones synchronize to the millisecond without internet, crafting an electric national tifo across the stadium.
+            </span>
+          </p>
+        </div>
+      </article>
+
+      <!-- Technical Deep Dive Box -->
+      <div class="tech-card">
+        <h3 class="tech-card__title">
+          <span>⚙️</span>
+          <span class="ar-text">السر التقني: كيفاش يخدم بـ 0 داتابيز و0 دينار؟</span>
+          <span class="fr-text hidden">Le Secret Technique : 0 Base de Données, 0 Coût</span>
+          <span class="en-text hidden">The Technical Architecture: 0 DB, Zero Running Cost</span>
+        </h3>
+        <p class="guide-step__desc">
+          <span class="ar-text">
+            <strong>شفرة غراي (Gray Code):</strong> تمنع الخلط بين أرقام الهواتف المتجاورة لأن بت واحد فقط يتبدل بين كل رقم والذي يليه.<br/>
+            <strong>الهوموجرافيا (Homography):</strong> مصفوفة تحويل رياضي في بايثون وOpenCV تقلب منظور الكاميرا المائل إلى شبكة مدرج مسطحة بدقة بكسل واحد.<br/>
+            <strong>التشغيل أوفلاين (Client-Side RLE):</strong> ملف العرض حجمه أقل من 100 كيلوبايت، يُحفظ في ذاكرة الهاتف ويتحكم فيه متصفح الهاتف بالساعة المحلية. لا سيرفر يسقط ولا شبكة 4G تنقطع!
+          </span>
+          <span class="fr-text hidden">
+            <strong>Gray Code :</strong> Élimine toute ambiguïté de transition binaire entre téléphones voisins (1 seul bit change par palier).<br/>
+            <strong>Homographie :</strong> Matrice de perspective 3x3 qui rectifie l'angle oblique de la caméra en une matrice de sièges orthogonale.<br/>
+            <strong>Zero Serveur en direct :</strong> Le fichier show RLE compressé pèse moins de 100 Ko, se joue en local via l'horloge interne de l'appareil.
+          </span>
+          <span class="en-text hidden">
+            <strong>Gray Code:</strong> Eliminates temporal bit transitions between adjacent seats (single bit flip per step).<br/>
+            <strong>Homography:</strong> A 3x3 perspective transformation matrix converting skewed stadium stands into an aligned 2D coordinate grid.<br/>
+            <strong>Zero Server Load:</strong> Compact RLE show file (under 100 KB) cached on-device, running directly off the hardware clock with zero live server dependencies.
+          </span>
+        </p>
+        <div class="tech-badge-row">
+          <span class="tech-badge">OpenCV 5</span>
+          <span class="tech-badge">Homography Matrix 3x3</span>
+          <span class="tech-badge">Gray Code Encoding</span>
+          <span class="tech-badge">Web Audio & Haptics</span>
+          <span class="tech-badge">Service Worker Offline</span>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div style="display: flex; gap: var(--sp-3); flex-wrap: wrap; margin-top: var(--sp-6);">
+        <a href="/simulation.html" class="btn btn--secondary btn--block" style="text-decoration: none;">
+          <span class="ar-text">🖥️ تجربة المحاكاة وبرمجة التيفو (Studio)</span>
+          <span class="fr-text hidden">🖥️ Simulation & Studio de Programmation</span>
+          <span class="en-text hidden">🖥️ Stadium Simulation & Tifo Studio</span>
+        </a>
+      </div>
+
+      <div class="guide-action-bar">
+        <a href="/" class="btn btn--primary btn--lg btn--block" style="text-decoration: none; box-shadow: 0 8px 24px rgba(10, 125, 62, 0.4);">
+          <span class="ar-text">ابدأ الآن وادخل للتطبيق 🇩🇿</span>
+          <span class="fr-text hidden">Lancer l'Application Rayati 🇩🇿</span>
+          <span class="en-text hidden">Launch Rayati App Now 🇩🇿</span>
+        </a>
+      </div>
+    </main>
+
+    <script type="module" src="/src/guide.ts"></script>
+  </body>
+</html>
