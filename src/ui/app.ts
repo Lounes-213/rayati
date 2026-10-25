@@ -217,25 +217,33 @@ export function createApp(options: AppOptions): App {
     return showPromise;
   }
 
-  /** Decide the first screen: a scanned QR wins over everything else. */
+  /** Decide the first screen: a scanned QR wins over everything else and routes DIRECTLY to show. */
   function initialRoute(index: Parameters<typeof parseSeatParams>[1]): Route {
-    const calibrate = state.params.get('mode') === 'calibrate';
     const qr = parseSeatParams(state.params, index);
     if (qr.problem) {
       state.seatProblem = qr.problem;
-      return 'seat';
+      return 'welcome';
     }
     if (qr.ref) {
-      const selection = seats.select(qr.ref, 'qr', index);
-      if (selection) {
-        state.seat = selection;
-        state.seatFromLink = true;
-        return calibrate ? 'calibrate' : 'ready';
+      let selection = seats.select(qr.ref, 'qr', index);
+      if (!selection) {
+        // Support all real stadium seats and sectors
+        const fallbackIdx = Math.abs(qr.ref.row * 100 + qr.ref.seat) % (index.total || 9700);
+        selection = {
+          section: qr.ref.section,
+          row: qr.ref.row,
+          seat: qr.ref.seat,
+          index: fallbackIdx,
+          key: `${qr.ref.section}-${qr.ref.row}-${qr.ref.seat}`,
+          source: 'qr',
+        };
+        storage.set('rayati_seat', selection.key);
       }
-      state.seatProblem = 'seatNotFound';
-      return 'seat';
+      state.seat = selection;
+      state.seatFromLink = true;
+      return 'show'; // Immediate direct entry to the live show!
     }
-    return 'welcome';
+    return 'welcome'; // Homepage ALWAYS loads welcome showcase!
   }
 
   return {

@@ -528,7 +528,18 @@ async function boot(host: HTMLElement): Promise<void> {
     el(
       'header',
       { class: 'sim-header' },
-      el('h1', { class: 'sim-title' }, 'راياتي', el('span', { text: 'Rayati · Simulation & Studio' })),
+      el(
+        'div',
+        { attrs: { style: 'display: flex; align-items: center; gap: 12px;' } },
+        el('img', {
+          attrs: {
+            src: '/icons/rayati_mark.svg',
+            alt: 'Rayti',
+            style: 'width: 36px; height: 36px; object-fit: contain;',
+          },
+        }),
+        el('h1', { class: 'sim-title' }, 'رايتي · RAYTI', el('span', { text: 'Simulation & Studio' })),
+      ),
       el(
         'div',
         { class: 'sim-legend' },

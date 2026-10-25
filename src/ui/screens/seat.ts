@@ -1,15 +1,12 @@
-import type { SeatRef } from '../../core/types';
-import { checkSeat, rowOf, rowsOfSection, seatNumbers, type SeatIndex } from '../../domain/seat';
 import type { AppContext, ScreenFactory } from '../app';
 import { createLangSwitch } from '../components/langSwitch';
 import { createSeatPreview } from '../components/seatPreview';
 import { el, screenShell } from '../dom';
 
 /**
- * Screen 2 — Seat. Two ways in, one source of truth: the cascading dropdowns are
- * filled from seats.json, so an invalid seat cannot even be selected. The QR link
- * (?s=B&r=12&n=7) is printed on the seat itself, not on the ticket, because fans
- * often sit somewhere other than their ticket says.
+ * Screen 2 — Seat Confirmation.
+ * Strictly driven by the QR code scanned on the seat backrest.
+ * Manual seat changing is completely removed to protect the tifo choreography.
  */
 export const createSeatScreen: ScreenFactory = (ctx: AppContext) => {
   const { i18n, state, seats } = ctx;
@@ -23,193 +20,95 @@ export const createSeatScreen: ScreenFactory = (ctx: AppContext) => {
     attrs: { type: 'button' },
     on: { click: () => ctx.go(state.seat ? 'ready' : 'welcome') },
   });
-  inner.append(el('div', { class: 'topbar' }, back, createLangSwitch(i18n)));
 
-  if (!index) {
+  const brandLogo = el(
+    'div',
+    { attrs: { style: 'display: flex; align-items: center; gap: 10px;' } },
+    el('img', {
+      attrs: {
+        src: '/icons/rayati_mark.svg',
+        alt: 'Rayti',
+        style: 'width: 34px; height: 34px; object-fit: contain;',
+      },
+    }),
+    el(
+      'div',
+      {},
+      el('div', {
+        attrs: { style: 'font-weight: 900; font-size: 1.15rem; color: #0F172A; line-height: 1.1;' },
+        text: 'رايتي · RAYTI',
+      }),
+      el('div', {
+        attrs: { style: 'font-size: 9px; color: #008B7A; font-weight: 800; letter-spacing: 0.05em;' },
+        text: 'STADIUM LIGHT SHOW',
+      }),
+    ),
+  );
+
+  inner.append(el('div', { class: 'topbar' }, back, brandLogo, createLangSwitch(i18n)));
+
+  if (state.seat && state.seat.index >= 0) {
+    const preview = index ? createSeatPreview(index, t('a11y.seatGrid')) : null;
+    preview?.update(state.seat);
+
     inner.append(
       el(
         'div',
-        { class: 'card' },
-        el('h1', { class: 'section-title', text: t('seat.title') }),
-        el('p', { class: 'card__hint', text: t('error.seats') }),
+        { class: 'card', attrs: { style: 'background: var(--c-surface); border-radius: var(--r-lg);' } },
+        el(
+          'div',
+          { class: 'row row--between', attrs: { style: 'margin-bottom: 8px;' } },
+          el('h1', { class: 'card__title', text: 'تم تأكيد موقع مقعدك' }),
+          el('span', { class: 'pill pill--ok' }, 'مسح رمز QR'),
+        ),
+        el(
+          'div',
+          { class: 'seat-summary', attrs: { style: 'margin-block: 12px;' } },
+          el('span', { class: 'seat-summary__seat num', text: state.seat.key }),
+          el(
+            'span',
+            { class: 'seat-summary__meta' },
+            `المدرج ${state.seat.section} · الصف ${state.seat.row} · المقعد ${state.seat.seat}`,
+          ),
+        ),
+        preview ? preview.element : el('div'),
         el('button', {
           class: 'btn btn--primary btn--block',
-          text: t('nav.retry'),
-          attrs: { type: 'button' },
-          on: {
-            click: async () => {
-              try {
-                await seats.load();
-                ctx.go('seat');
-              } catch {
-                ctx.toast(t('error.seats'), 'error');
-              }
-            },
-          },
+          text: 'الانتقال إلى شاشة العرض المباشر',
+          attrs: { type: 'button', style: 'margin-top: 14px; border-radius: var(--r-full); font-weight: 700;' },
+          on: { click: () => ctx.go('ready') },
         }),
       ),
     );
     return { element: screen };
   }
 
-  inner.append(...buildPicker(ctx, index));
+  // No seat scanned yet
+  inner.append(
+    el(
+      'div',
+      { class: 'card', attrs: { style: 'background: var(--c-surface); border-radius: var(--r-lg); text-align: center; padding: 24px;' } },
+      el('img', {
+        attrs: {
+          src: '/icons/rayati_mark.svg',
+          alt: 'Rayti',
+          style: 'width: 64px; height: 64px; margin: 0 auto 14px; display: block; object-fit: contain;',
+        },
+      }),
+      el('h1', { class: 'card__title', text: 'تحديد المقعد عبر رمز QR حصرياً' }),
+      el('p', {
+        class: 'card__hint',
+        text: 'لضمان دقة وتطابق ألوان التيفو في الملعب، يتم تحديد مقعدك حصرياً عن طريق مسح رمز QR الملصق على ظهر كرسيك بكاميرا الهاتف.',
+        attrs: { style: 'line-height: 1.6; margin-block: 10px;' },
+      }),
+      el('button', {
+        class: 'btn btn--primary btn--block',
+        text: 'العودة إلى الصفحة الرئيسية',
+        attrs: { type: 'button', style: 'border-radius: var(--r-full); font-weight: 700; margin-top: 8px;' },
+        on: { click: () => ctx.go('welcome') },
+      }),
+    ),
+  );
+
   return { element: screen };
 };
-
-function buildPicker(ctx: AppContext, index: SeatIndex): HTMLElement[] {
-  const { i18n, state, seats } = ctx;
-  const t = (key: string, vars?: Record<string, string | number>) => i18n.t(key, vars);
-
-  const initial: Partial<SeatRef> = state.seat ?? {};
-  let pick: Partial<SeatRef> = {
-    section: initial.section,
-    row: initial.row,
-    seat: initial.seat,
-  };
-
-  const preview = createSeatPreview(index, t('a11y.seatGrid'));
-  const confirm = el('button', {
-    class: 'btn btn--primary btn--lg btn--block',
-    text: t('seat.confirm'),
-    attrs: { type: 'button', disabled: true },
-  });
-
-  const sectionSelect = el('select', { class: 'select', attrs: { 'aria-label': t('seat.section') } });
-  const rowSelect = el('select', { class: 'select', attrs: { 'aria-label': t('seat.row') } });
-  const seatSelect = el('select', { class: 'select select--seat', attrs: { 'aria-label': t('seat.number') } });
-
-  const placeholder = (label: string) => el('option', { text: label, attrs: { value: '' } });
-  sectionSelect.appendChild(placeholder('—'));
-  for (const section of index.sections) {
-    sectionSelect.appendChild(el('option', { text: section.id, attrs: { value: section.id } }));
-  }
-
-  function valid(): SeatRef | null {
-    if (!pick.section || !pick.row || !pick.seat) return null;
-    const ref: SeatRef = { section: pick.section, row: pick.row, seat: pick.seat };
-    return checkSeat(index, ref).ok ? ref : null;
-  }
-
-  function refresh(): void {
-    const ref = valid();
-    confirm.disabled = !ref;
-    if (ref) {
-      preview.update({
-        ...ref,
-        index: checkSeat(index, ref).index,
-        key: `${ref.section}-${ref.row}-${ref.seat}`,
-        source: 'manual',
-      });
-    } else {
-      preview.update(null);
-    }
-  }
-
-  function fillRows(): void {
-    rowSelect.replaceChildren(placeholder('—'));
-    seatSelect.replaceChildren(placeholder('—'));
-    seatSelect.disabled = true;
-    if (!pick.section) {
-      rowSelect.disabled = true;
-      refresh();
-      return;
-    }
-    rowSelect.disabled = false;
-    for (const row of rowsOfSection(index, pick.section)) {
-      rowSelect.appendChild(el('option', { text: String(row.id), attrs: { value: String(row.id) } }));
-    }
-    if (pick.row && rowOf(index, pick.section, pick.row)) rowSelect.value = String(pick.row);
-    else pick.row = undefined;
-    fillSeats();
-  }
-
-  function fillSeats(): void {
-    seatSelect.replaceChildren(placeholder('—'));
-    if (!pick.section || !pick.row) {
-      seatSelect.disabled = true;
-      refresh();
-      return;
-    }
-    seatSelect.disabled = false;
-    for (const seat of seatNumbers(index, pick.section, pick.row)) {
-      seatSelect.appendChild(el('option', { text: String(seat), attrs: { value: String(seat) } }));
-    }
-    if (pick.seat && seatNumbers(index, pick.section, pick.row).includes(pick.seat)) {
-      seatSelect.value = String(pick.seat);
-    } else {
-      pick.seat = undefined;
-    }
-    refresh();
-  }
-
-  sectionSelect.addEventListener('change', () => {
-    pick = { section: sectionSelect.value || undefined };
-    fillRows();
-  });
-  rowSelect.addEventListener('change', () => {
-    pick.row = rowSelect.value ? Number.parseInt(rowSelect.value, 10) : undefined;
-    fillSeats();
-  });
-  seatSelect.addEventListener('change', () => {
-    pick.seat = seatSelect.value ? Number.parseInt(seatSelect.value, 10) : undefined;
-    refresh();
-  });
-
-  if (pick.section) sectionSelect.value = pick.section;
-  fillRows();
-
-  confirm.addEventListener('click', () => {
-    const ref = valid();
-    if (!ref) return;
-    const selection = seats.select(ref, 'manual', index);
-    if (!selection) {
-      ctx.toast(t('problem.seatNotFound'), 'error');
-      return;
-    }
-    ctx.saveSeat(selection);
-    ctx.go('ready');
-  });
-
-  const detected =
-    state.seatFromLink && state.seat
-      ? el(
-          'div',
-          { class: 'card card--tight' },
-          el(
-            'div',
-            { class: 'row' },
-            el('span', { class: 'pill pill--ok' }, el('span', { class: 'pill__dot' }), t('seat.detected')),
-          ),
-          el('div', { class: 'seat-summary__seat num', text: state.seat.key }),
-        )
-      : null;
-
-  const problem = state.seatProblem
-    ? el('div', { class: 'pill pill--err', text: t(`problem.${state.seatProblem}`) })
-    : null;
-
-  return [
-    el(
-      'div',
-      { class: 'stack' },
-      el('h1', { class: 'section-title', text: t('seat.title') }),
-      el('p', { class: 'card__hint', text: t('seat.lead') }),
-      problem,
-      detected,
-    ),
-    el(
-      'div',
-      { class: 'card' },
-      el(
-        'div',
-        { class: 'form-grid' },
-        el('label', { class: 'field' }, el('span', { class: 'field__label', text: t('seat.section') }), sectionSelect),
-        el('label', { class: 'field' }, el('span', { class: 'field__label', text: t('seat.row') }), rowSelect),
-        el('label', { class: 'field' }, el('span', { class: 'field__label', text: t('seat.number') }), seatSelect),
-      ),
-      preview.element,
-      confirm,
-    ),
-    el('p', { class: 'footer-note', text: t('seat.footer') }),
-  ];
-}

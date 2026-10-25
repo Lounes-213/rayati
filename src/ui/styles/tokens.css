@@ -1,39 +1,38 @@
 /* =========================================================================
-   Rayati design tokens — Algeria in a light show.
-   Dark-first, light theme follows the system. Every value used by the UI
-   comes from here (no magic numbers in components).
+   Rayati design tokens — Digiticket Light Mode Theme.
+   Clean, modern Algerian sports ticketing & stadium tifo aesthetic.
    ========================================================================= */
 :root {
-  /* --- brand palette (Algerian) --- */
-  --c-green: #0a7d3e;
-  --c-green-bright: #12c262;
-  --c-green-deep: #063f20;
+  /* --- brand palette (Stadium Emerald & Tech Green) --- */
+  --c-green: #008b7a;
+  --c-green-bright: #00a859;
+  --c-green-deep: #005f53;
   --c-red: #d21034;
-  --c-red-bright: #ff3b5c;
-  --c-gold: #e8b84b;
+  --c-red-bright: #ef4444;
+  --c-gold: #d97706;
   --c-white: #ffffff;
 
-  /* --- surfaces (dark) --- */
-  --c-bg: #05070a;
-  --c-bg-soft: #090d13;
-  --c-surface: #0e131a;
-  --c-surface-2: #161e29;
-  --c-surface-3: #1e2836;
-  --c-line: rgba(255, 255, 255, 0.1);
-  --c-line-strong: rgba(255, 255, 255, 0.2);
+  /* --- surfaces (Modern Light Mode) --- */
+  --c-bg: #f8fafc;
+  --c-bg-soft: #ffffff;
+  --c-surface: #ffffff;
+  --c-surface-2: #f1f5f9;
+  --c-surface-3: #e2e8f0;
+  --c-line: #e2e8f0;
+  --c-line-strong: #cbd5e1;
 
-  /* --- text --- */
-  --c-text: #f4f7fa;
-  --c-text-dim: #a9b6c4;
-  --c-text-muted: #7f8d9c;
+  /* --- text (Deep Navy/Slate, high contrast) --- */
+  --c-text: #0f172a;
+  --c-text-dim: #334155;
+  --c-text-muted: #64748b;
   --c-on-accent: #ffffff;
-  --c-on-gold: #14100a;
+  --c-on-gold: #ffffff;
 
   /* --- semantic --- */
-  --c-ok: var(--c-green-bright);
-  --c-warn: var(--c-gold);
-  --c-err: #ff5a76;
-  --c-focus: #7ce2a8;
+  --c-ok: #008b7a;
+  --c-warn: #d97706;
+  --c-err: #ef4444;
+  --c-focus: #008b7a;
 
   /* --- spacing scale (4pt grid) --- */
   --sp-1: 4px;
@@ -46,29 +45,29 @@
   --sp-8: 48px;
   --sp-9: 64px;
 
-  /* --- radii --- */
-  --r-sm: 12px;
-  --r-md: 18px;
-  --r-lg: 26px;
-  --r-xl: 34px;
-  --r-full: 999px;
+  /* --- radii (pill buttons & smooth cards) --- */
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 30px;
+  --r-full: 9999px;
 
   /* --- type --- */
   --font-ar: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, system-ui, sans-serif;
   --font-latin: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-num: 'Inter', system-ui, sans-serif;
-  --fs-display: clamp(34px, 9vw, 52px);
-  --fs-h1: clamp(26px, 6.4vw, 34px);
-  --fs-h2: clamp(20px, 4.8vw, 24px);
-  --fs-h3: 18px;
-  --fs-body: 17px;
-  --fs-small: 15px;
-  --fs-tiny: 13px;
-  --lh-tight: 1.15;
-  --lh-body: 1.6;
+  --fs-display: clamp(30px, 8vw, 44px);
+  --fs-h1: clamp(24px, 6vw, 30px);
+  --fs-h2: clamp(18px, 4.4vw, 22px);
+  --fs-h3: 17px;
+  --fs-body: 15px;
+  --fs-small: 13px;
+  --fs-tiny: 12px;
+  --lh-tight: 1.2;
+  --lh-body: 1.55;
   --fw-regular: 400;
   --fw-medium: 600;
-  --fw-bold: 800;
+  --fw-bold: 700;
 
   /* --- motion (all under 300ms) --- */
   --dur-fast: 120ms;
@@ -77,45 +76,21 @@
   --ease: cubic-bezier(0.22, 0.71, 0.2, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* --- elevation --- */
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-2: 0 12px 32px rgba(0, 0, 0, 0.45);
-  --shadow-3: 0 24px 64px rgba(0, 0, 0, 0.55);
-  --glow-green: 0 0 0 1px rgba(18, 194, 98, 0.35), 0 12px 40px rgba(10, 125, 62, 0.35);
-  --glow-red: 0 0 0 1px rgba(255, 59, 92, 0.32), 0 12px 40px rgba(210, 16, 52, 0.3);
+  /* --- elevation (soft crisp light shadows) --- */
+  --shadow-1: 0 1px 3px rgba(15, 23, 42, 0.05);
+  --shadow-2: 0 4px 16px rgba(15, 23, 42, 0.06);
+  --shadow-3: 0 12px 32px rgba(15, 23, 42, 0.08);
+  --glow-green: 0 4px 14px rgba(0, 139, 122, 0.25);
+  --glow-red: 0 4px 14px rgba(225, 29, 72, 0.25);
 
   /* --- layout --- */
-  --tap: 48px;
-  --tap-lg: 56px;
+  --tap: 44px;
+  --tap-lg: 50px;
   --shell-max: 560px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Light theme follows the system. Contrast ratios stay AA on every surface. */
-@media (prefers-color-scheme: light) {
-  :root {
-    --c-bg: #f6f8f7;
-    --c-bg-soft: #ffffff;
-    --c-surface: #ffffff;
-    --c-surface-2: #f1f4f2;
-    --c-surface-3: #e7ebe8;
-    --c-line: rgba(9, 24, 16, 0.12);
-    --c-line-strong: rgba(9, 24, 16, 0.24);
-    --c-text: #08130d;
-    --c-text-dim: #38505f;
-    --c-text-muted: #5a7080;
-    --c-on-accent: #ffffff;
-    --c-green: #0a6a36;
-    --c-err: #c00d31;
-    --c-focus: #0a6a36;
-    --shadow-2: 0 12px 32px rgba(9, 24, 16, 0.12);
-    --shadow-3: 0 24px 64px rgba(9, 24, 16, 0.16);
-    --glow-green: 0 0 0 1px rgba(10, 106, 54, 0.25), 0 10px 30px rgba(10, 125, 62, 0.18);
-  }
-}
-
-/* Users who prefer less motion get the same information, instantly. */
 @media (prefers-reduced-motion: reduce) {
   :root {
     --dur-fast: 0ms;

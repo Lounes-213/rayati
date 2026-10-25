@@ -1,9 +1,6 @@
 /**
- * /api/presence — Live phone presence and optical validation registry.
- *
- * 1. Phones send heartbeats (POST). They start unvalidated (validated: false).
- * 2. PC / Camera detects phone blinking and validates them (POST action="validate").
- * 3. Phone receives confirmation { validated: true, seat } and proceeds to Tifo!
+ * /api/presence — Lightweight in-memory presence endpoint.
+ * No Cloudflare KV operations are used (0 KV quota consumption).
  */
 
 const memoryPresence = new Map();
@@ -17,12 +14,11 @@ function cleanStaleDevices(map, maxAgeMs = 25000) {
   }
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost({ request }) {
   try {
     const data = await request.json();
     const action = String(data.action || 'heartbeat');
 
-    // Admin validation action: validate one or all devices
     if (action === 'validate') {
       const targetIds = Array.isArray(data.deviceIds) ? data.deviceIds : [];
       const validateAll = Boolean(data.validateAll);
@@ -41,7 +37,6 @@ export async function onRequestPost({ request, env }) {
       });
     }
 
-    // Phone heartbeat
     const deviceId = String(data.deviceId || '').trim();
     if (!deviceId) {
       return new Response(JSON.stringify({ error: 'deviceId is required' }), {
@@ -57,23 +52,11 @@ export async function onRequestPost({ request, env }) {
       seat: data.seat || existing?.seat || null,
       userAgent: request.headers.get('user-agent')?.substring(0, 80) || 'Device',
       lastSeen: now,
-      // Keep validated status if already confirmed by PC
-      validated: Boolean(existing?.validated || data.validated || false),
+      validated: existing ? existing.validated : true,
     };
 
     memoryPresence.set(deviceId, entry);
     cleanStaleDevices(memoryPresence);
-
-    // Persist to KV if bound
-    if (env && env.RAYATI_PRESENCE) {
-      try {
-        await env.RAYATI_PRESENCE.put(`dev:${deviceId}`, JSON.stringify(entry), {
-          expirationTtl: 60,
-        });
-      } catch {
-        // Continue
-      }
-    }
 
     return new Response(
       JSON.stringify({
@@ -107,7 +90,7 @@ export async function onRequestGet() {
     JSON.stringify({
       count: devices.length,
       devices,
-      now: Date.now(),
+      serverTime: Date.now(),
     }),
     {
       headers: {

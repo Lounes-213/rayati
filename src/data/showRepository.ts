@@ -59,10 +59,34 @@ export function createShowRepository(options: ShowRepositoryOptions = {}): ShowR
     },
 
     async load(onProgress) {
-      const { text, bytes, fromCache } = await fetchWithProgress(showUrl, fetcher, (r) =>
-        onProgress?.(r * 0.9),
-      );
-      const payload = JSON.parse(text) as ShowFile;
+      let payload: ShowFile | null = null;
+      let text = '';
+      let bytes = 0;
+      let fromCache = false;
+
+      try {
+        const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('rayati_active_show') : null;
+        if (stored) {
+          payload = JSON.parse(stored) as ShowFile;
+          text = stored;
+          bytes = new Blob([stored]).size;
+          fromCache = true;
+          onProgress?.(0.9);
+        }
+      } catch {
+        payload = null;
+      }
+
+      if (!payload) {
+        const res = await fetchWithProgress(showUrl, fetcher, (r) =>
+          onProgress?.(r * 0.9),
+        );
+        text = res.text;
+        bytes = res.bytes;
+        fromCache = res.fromCache;
+        payload = JSON.parse(text) as ShowFile;
+      }
+
       const show = decodeShow(payload, { flatThresholdTicks: SHOW.flatThresholdTicks, now: now() });
       if (show.expired) console.warn('[rayati] show file is past its expiry date');
 

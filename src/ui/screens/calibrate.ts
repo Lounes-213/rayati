@@ -5,11 +5,11 @@ import type { AppContext, ScreenFactory } from '../app';
 import { el } from '../dom';
 
 /**
- * Screen 2 — Optical Calibration via Gray Code flashing.
- * - ZERO user phone camera: phones only display flashing optical codes.
- * - The phone blinks Gray Code and sends continuous heartbeats.
- * - When the stadium PC camera / admin detects and validates the phone,
- *   it triggers an emerald green flash, haptic vibration, celebratory chime,
+ * Screen 2 — Optical Calibration via Full-Screen Gray Code flashing.
+ * - 100% PURE FULL-SCREEN FLASHING LIGHT: No cards or opaque boxes blocking the screen!
+ * - High-contrast maximum brightness pulses so the PC camera can easily detect the light.
+ * - When the stadium PC camera / admin detects the phone,
+ *   the entire screen turns luminous Emerald Green, vibrates, plays the chime,
  *   and transitions to the synchronized show screen.
  */
 export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
@@ -18,58 +18,48 @@ export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
   const seatIndex = Math.max(0, state.seat?.index ?? 0);
   const code = encodeCode(seatIndex);
 
-  const screen = el('section', { class: 'flash', attrs: { 'data-screen': 'calibrate' } });
-  const bitLayer = el('div', { class: 'flash__bit' });
-
-  // Progress pulse animation ring
-  const radarWave = el('div', {
+  const screen = el('section', {
+    class: 'flash',
     attrs: {
-      style:
-        'width: 54px; height: 54px; border-radius: 50%; border: 3px solid var(--c-gold); margin: 0 auto; animation: pulse-radar 1.5s infinite ease-out;',
+      'data-screen': 'calibrate',
+      style: 'position: fixed; inset: 0; background: #000; overflow: hidden; touch-action: none; user-select: none;',
     },
   });
 
-  // Active calibration HUD
-  const hud = el(
+  // Full-screen pure optical flashing light layer (100% of display)
+  const bitLayer = el('div', {
+    class: 'flash__bit',
+    attrs: {
+      style: 'position: absolute; inset: 0; width: 100vw; height: 100vh; background: #000; transition: background 40ms linear;',
+    },
+  });
+
+  // Minimal, non-intrusive top cancel button (does NOT block screen light)
+  const exitBtn = el('button', {
+    class: 'btn btn--ghost btn--sm',
+    text: 'إلغاء',
+    attrs: {
+      type: 'button',
+      style:
+        'position: absolute; top: calc(var(--safe-top, 12px) + 10px); inset-inline-end: 14px; background: rgba(0,0,0,0.5); backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.3); color: #fff; border-radius: 9999px; padding: 6px 14px; font-size: 12px; z-index: 10; cursor: pointer;',
+    },
+    on: { click: () => ctx.go('welcome') },
+  });
+
+  // Subtle floating bottom indicator (translucent pill, leaves 95%+ of screen unblocked)
+  const liveIndicator = el(
     'div',
-    { class: 'flash__hud stack', attrs: { style: 'max-width: 380px; text-align: center;' } },
-    radarWave,
-    el('div', {
-      class: 'card__title',
-      text: '📡 كاميرا المنصة تقوم بمسح المدرج...',
-      attrs: { style: 'color: #fff; font-size: 1.15rem; margin-top: 8px;' },
-    }),
-    el('p', {
-      text: 'ارفع هاتفك أمامك ووجه الشاشة نحو الميدان لتلتقط كاميرا المنصة موقعك تلقائياً عبر شفرة غراي.',
-      attrs: { style: 'font-size: 0.85rem; color: rgba(255,255,255,0.8); line-height: 1.4;' },
-    }),
-    el('div', { class: 'flash__code', text: code.bits.join(' ') }),
-    el(
-      'div',
-      {
-        attrs: {
-          style:
-            'display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.8rem; color: var(--c-gold); font-family: var(--font-num); background: rgba(0,0,0,0.5); padding: 6px 12px; border-radius: var(--r-full); border: 1px solid rgba(212,175,55,0.3);',
-        },
+    {
+      attrs: {
+        style:
+          'position: absolute; bottom: calc(var(--safe-bottom, 16px) + 16px); inset-inline: 0; margin: 0 auto; width: max-content; max-width: 90vw; background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); padding: 6px 16px; border-radius: 9999px; border: 1px solid rgba(255,255,255,0.25); color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; z-index: 10; pointer-events: none;',
       },
-      el('span', { class: 'pill__dot', attrs: { style: 'background: var(--c-gold); box-shadow: 0 0 8px var(--c-gold);' } }),
-      'بانتظار تأكيد كاميرا المنصة (Live CV)',
-    ),
-    el('button', {
-      class: 'btn btn--secondary btn--sm btn--block',
-      text: '✕ إلغاء والعودة للرئيسية',
-      attrs: { type: 'button', style: 'margin-top: 10px;' },
-      on: { click: () => ctx.go('welcome') },
-    }),
+    },
+    el('span', { class: 'pill__dot', attrs: { style: 'background: #00ff66; box-shadow: 0 0 10px #00ff66;' } }),
+    el('span', { attrs: { style: 'font-weight: 600;' }, text: 'الوميض نشط · وجه الشاشة نحو كاميرا الحاسوب' }),
   );
 
-  // Success Confirmation HUD (Emerald Green Confirmation)
-  const checkSvg = `
-    <svg width="68" height="68" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin: 0 auto; display: block; filter: drop-shadow(0 4px 16px rgba(0,0,0,0.4));">
-      <circle cx="32" cy="32" r="30" fill="#D4AF37" stroke="#FFFFFF" stroke-width="3"/>
-      <path d="M20 32.5L28.5 41L44 24" stroke="#05070A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  `;
+
 
   const seatSummaryMeta = el('span', {
     class: 'seat-summary__meta num',
@@ -85,17 +75,23 @@ export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
       class: 'flash__hud stack hidden',
       attrs: {
         style:
-          'max-width: 360px; text-align: center; border-color: rgba(212, 175, 55, 0.6); box-shadow: 0 20px 50px rgba(0,0,0,0.8); background: rgba(5,7,10,0.92);',
+          'position: relative; z-index: 20; max-width: 360px; text-align: center; border-color: rgba(212, 175, 55, 0.6); box-shadow: 0 20px 50px rgba(0,0,0,0.8); background: rgba(5,7,10,0.92);',
       },
     },
-    el('div', { html: checkSvg }),
+    el('img', {
+      attrs: {
+        src: '/icons/rayati_mark.svg',
+        alt: 'Rayti',
+        style: 'width: 64px; height: 64px; margin: 0 auto 10px; display: block; filter: drop-shadow(0 4px 18px rgba(0, 168, 89, 0.5));',
+      },
+    }),
     el('h2', {
       class: 'card__title',
-      text: '✅ تم التعرف وتأكيد المقعد بنجاح 🇩🇿',
+      text: 'تم التقاط وتأكيد الهاتف بنجاح',
       attrs: { style: 'color: #D4AF37; font-size: 1.25rem; margin-top: 8px;' },
     }),
     el('p', {
-      text: 'التقطت كاميرا المنصة إشارة هاتفك بدقة، وأصبح جهازك بكسلاً نشطاً في التيفو المتزامن.',
+      text: 'التقطت كاميرا الحاسوب ضوء هاتفك وتم تثبيت موقعك في التيفو المتزامن.',
       attrs: { style: 'color: rgba(255,255,255,0.85); font-size: 0.85rem;' },
     }),
     el(
@@ -111,13 +107,13 @@ export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
     ),
     el('button', {
       class: 'btn btn--primary btn--lg btn--block',
-      text: 'المتابعة إلى شاشة التيفو المتزامن 🚀',
+      text: 'المتابعة إلى شاشة التيفو المتزامن',
       attrs: { type: 'button', style: 'background: #D4AF37; color: #05070A; font-weight: 800; padding: 12px;' },
       on: { click: () => ctx.go('ready') },
     }),
   );
 
-  screen.append(bitLayer, hud, successHud);
+  screen.append(bitLayer, exitBtn, liveIndicator, successHud);
 
   let raf = 0;
   let start = 0;
@@ -187,7 +183,8 @@ export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
     bitLayer.style.background = '#0A7D3E';
     screen.style.background = '#0A7D3E';
 
-    hud.classList.add('hidden');
+    exitBtn.classList.add('hidden');
+    liveIndicator.classList.add('hidden');
     successHud.classList.remove('hidden');
 
     playSuccessFeedback();
@@ -205,7 +202,15 @@ export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
     const position = elapsed % cycleMs;
     const inCode = position < code.bits.length * CALIBRATION.bitMs;
     const bit = inCode ? code.bits[Math.floor(position / CALIBRATION.bitMs)] === 1 : false;
-    bitLayer.classList.toggle('flash__bit--on', bit);
+
+    // High brightness flashing
+    if (bit) {
+      bitLayer.style.background = '#FFFFFF';
+      screen.style.background = '#FFFFFF';
+    } else {
+      bitLayer.style.background = '#000000';
+      screen.style.background = '#000000';
+    }
 
     raf = requestAnimationFrame(loop);
   }
@@ -214,9 +219,9 @@ export const createCalibrateScreen: ScreenFactory = (ctx: AppContext) => {
     if (raf) cancelAnimationFrame(raf);
     isCompleted = false;
     screen.style.background = '#000';
-    bitLayer.style.background = '';
-    bitLayer.classList.remove('flash__bit--on');
-    hud.classList.remove('hidden');
+    bitLayer.style.background = '#000';
+    exitBtn.classList.remove('hidden');
+    liveIndicator.classList.remove('hidden');
     successHud.classList.add('hidden');
 
     start = performance.now();

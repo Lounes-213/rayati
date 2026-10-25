@@ -2,6 +2,8 @@ import type { ShowFile, TimelineSteps } from '../core/types';
 import { seatAt, type SeatIndex } from '../domain/seat';
 import { generateTifoShow, type TifoPresetType } from './tifoStudio';
 
+export type CadreShape = 'rectangle' | 'circle' | 'diamond' | 'heart' | 'triangle';
+
 export interface CadreBox {
   id: string;
   name: string;
@@ -10,6 +12,7 @@ export interface CadreBox {
   yMin: number;
   xMax: number;
   yMax: number;
+  shape?: CadreShape;
 }
 
 export type OutsideCadreMode = 'black' | 'emerald' | 'white' | 'dim';
@@ -110,11 +113,27 @@ export function analyzeCadreSeats(seats: SeatIndex, cadre: CadreBox): {
     const nx = Math.min(1, Math.max(0, x / gridW));
     const ny = Math.min(1, Math.max(0, y / gridH));
 
-    const inCadre = nx >= cadre.xMin && nx <= cadre.xMax && ny >= cadre.yMin && ny <= cadre.yMax;
-    if (inCadre) totalInCadre++;
-
+    const inBox = nx >= cadre.xMin && nx <= cadre.xMax && ny >= cadre.yMin && ny <= cadre.yMax;
     const u = Math.min(1, Math.max(0, (nx - cadre.xMin) / width));
     const v = Math.min(1, Math.max(0, (ny - cadre.yMin) / height));
+
+    let inCadre = inBox;
+    if (inBox && cadre.shape && cadre.shape !== 'rectangle') {
+      if (cadre.shape === 'circle') {
+        const dx = u - 0.5;
+        const dy = v - 0.5;
+        inCadre = dx * dx + dy * dy <= 0.25;
+      } else if (cadre.shape === 'diamond') {
+        inCadre = Math.abs(u - 0.5) + Math.abs(v - 0.5) <= 0.5;
+      } else if (cadre.shape === 'triangle') {
+        inCadre = v >= 2 * Math.abs(u - 0.5);
+      } else if (cadre.shape === 'heart') {
+        const x0 = (u - 0.5) * 2.2;
+        const y0 = (0.55 - v) * 2.2;
+        inCadre = Math.pow(x0 * x0 + y0 * y0 - 1, 3) - x0 * x0 * Math.pow(y0, 3) <= 0;
+      }
+    }
+    if (inCadre) totalInCadre++;
 
     seatsInfo[i] = { seatIndex: i, inCadre, nx, ny, u, v };
   }
@@ -278,8 +297,8 @@ export function generateShowWithCadrePreset(
   outsideMode: OutsideCadreMode = 'black',
   durationMs: number = 30000,
 ): ShowFile {
-  // If cadre is full stadium, delegate directly to the full generator
-  if (cadre.xMin === 0 && cadre.yMin === 0 && cadre.xMax === 1 && cadre.yMax === 1) {
+  // If cadre is full stadium and rectangular, delegate directly to the full generator
+  if (cadre.xMin === 0 && cadre.yMin === 0 && cadre.xMax === 1 && cadre.yMax === 1 && (!cadre.shape || cadre.shape === 'rectangle')) {
     return generateTifoShow(seats, {
       type: presetType,
       name: `Rayati-${presetType}`,

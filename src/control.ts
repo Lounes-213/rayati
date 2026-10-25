@@ -1,96 +1,74 @@
 import './ui/styles/base.css';
-import { type TifoPresetType } from './services/tifoStudio';
-import { prepareSeats } from './domain/seat';
-import seatsJson from '../public/seats.json';
-import {
-  PRESET_CADRES,
-  type CadreBox,
-  type OutsideCadreMode,
-  analyzeCadreSeats,
-  countConnectedInCadre,
-  generateShowFromImage,
-  generateShowWithCadrePreset,
-} from './services/cadreMapping';
-import { fetchLivePresence, validateDevicesFromAdmin, type PresenceDevice } from './services/presenceClient';
+import QRCode from 'qrcode';
+import { audioEngine, type RhythmEffect } from './services/audioEngine';
+import { realtimeSync } from './services/realtimeSync';
 import type { ShowFile } from './core/types';
-
-const seats = prepareSeats(seatsJson as never);
 
 // DOM Elements
 const standCanvas = document.getElementById('standCanvas') as HTMLCanvasElement;
-const previewCanvas = document.getElementById('previewCanvas') as HTMLCanvasElement;
-const camVideo = document.getElementById('camVideo') as HTMLVideoElement;
-const btnStadiumCam = document.getElementById('btnStadiumCam') as HTMLButtonElement;
-const btnWebcam = document.getElementById('btnWebcam') as HTMLButtonElement;
-const btnGrid = document.getElementById('btnGrid') as HTMLButtonElement;
-const startScanBtn = document.getElementById('startScanBtn') as HTMLButtonElement;
-const validateAllBtn = document.getElementById('validateAllBtn') as HTMLButtonElement;
-const quickValidateBtn = document.getElementById('quickValidateBtn') as HTMLButtonElement;
-const resetCadreBtn = document.getElementById('resetCadreBtn') as HTMLButtonElement;
-const refreshPresenceBtn = document.getElementById('refreshPresenceBtn') as HTMLButtonElement;
-const toggleDataModeBtn = document.getElementById('toggleDataModeBtn') as HTMLButtonElement;
-const dataSourceLabel = document.getElementById('dataSourceLabel') as HTMLElement;
-
-const connectedCountEl = document.getElementById('connectedCount') as HTMLElement;
-const cadreCountEl = document.getElementById('cadreCount') as HTMLElement;
-const cadrePctEl = document.getElementById('cadrePct') as HTMLElement;
-const activeTifoLabel = document.getElementById('activeTifoLabel') as HTMLElement;
-const cadreActiveModeLabel = document.getElementById('cadreActiveModeLabel') as HTMLElement;
-const selectedCadreTitle = document.getElementById('selectedCadreTitle') as HTMLElement;
-const cadreStatsDetail = document.getElementById('cadreStatsDetail') as HTMLElement;
-const canvasHudText = document.getElementById('canvasHudText') as HTMLElement;
-const hudDot = document.getElementById('hudDot') as HTMLElement;
-const devicesContainer = document.getElementById('devicesContainer') as HTMLElement;
-const devicesListCount = document.getElementById('devicesListCount') as HTMLElement;
-
+const audioVisualizerCanvas = document.getElementById('audioVisualizer') as HTMLCanvasElement;
+const canvasStatusLabel = document.getElementById('canvasStatusLabel') as HTMLElement;
+const devicesLiveCount = document.getElementById('devicesLiveCount') as HTMLElement;
 const masterClock = document.getElementById('masterClock') as HTMLElement;
-const countdownBanner = document.getElementById('countdownBanner') as HTMLElement;
-const kickoff10sBtn = document.getElementById('kickoff10sBtn') as HTMLButtonElement;
-const instantStartBtn = document.getElementById('instantStartBtn') as HTMLButtonElement;
-const blackoutBtn = document.getElementById('blackoutBtn') as HTMLButtonElement;
-const downloadShowBtn = document.getElementById('downloadShowBtn') as HTMLButtonElement;
+const kpiConnected = document.getElementById('kpiConnected') as HTMLElement;
+const kpiBpm = document.getElementById('kpiBpm') as HTMLElement;
+const bpmStatusLabel = document.getElementById('bpmStatusLabel') as HTMLElement;
+const totalSeatsDisplay = document.getElementById('totalSeatsDisplay') as HTMLElement;
+const gridDimBadge = document.getElementById('gridDimBadge') as HTMLElement;
 
-const tabPresets = document.getElementById('tabPresets') as HTMLButtonElement;
-const tabImages = document.getElementById('tabImages') as HTMLButtonElement;
-const presetsPanel = document.getElementById('presetsPanel') as HTMLElement;
-const imagesPanel = document.getElementById('imagesPanel') as HTMLElement;
+const gridColsInput = document.getElementById('gridColsInput') as HTMLInputElement;
+const gridRowsInput = document.getElementById('gridRowsInput') as HTMLInputElement;
+const btnApplyCustomDimensions = document.getElementById('btnApplyCustomDimensions') as HTMLButtonElement;
+
+// Preset dimension buttons (Starting from 1x1!)
+const btnSector1x1 = document.getElementById('btnSector1x1') as HTMLButtonElement;
+const btnSector2x2 = document.getElementById('btnSector2x2') as HTMLButtonElement;
+const btnSector4x4 = document.getElementById('btnSector4x4') as HTMLButtonElement;
+const btnSector8x8 = document.getElementById('btnSector8x8') as HTMLButtonElement;
+const btnSectorUltras = document.getElementById('btnSectorUltras') as HTMLButtonElement;
+const btnSectorGrandstand = document.getElementById('btnSectorGrandstand') as HTMLButtonElement;
+const btnSectorFull = document.getElementById('btnSectorFull') as HTMLButtonElement;
+
+const btnAudioToggle = document.getElementById('btnAudioToggle') as HTMLButtonElement;
+const bpmSelect = document.getElementById('bpmSelect') as HTMLSelectElement;
+const rhythmEffectSelect = document.getElementById('rhythmEffectSelect') as HTMLSelectElement;
+
 const imageFileInput = document.getElementById('imageFileInput') as HTMLInputElement;
-const outsideModeSelect = document.getElementById('outsideModeSelect') as HTMLSelectElement;
+const btnBroadcastShow = document.getElementById('btnBroadcastShow') as HTMLButtonElement;
+const btnCountdown10s = document.getElementById('btnCountdown10s') as HTMLButtonElement;
+const btnBlackout = document.getElementById('btnBlackout') as HTMLButtonElement;
+const btnEndShow = document.getElementById('btnEndShow') as HTMLButtonElement;
+const broadcastStatusMsg = document.getElementById('broadcastStatusMsg') as HTMLElement;
 
-// State: Real Data 100% by default!
-type ViewMode = 'stadium_cam' | 'webcam' | 'grid';
-let currentViewMode: ViewMode = 'webcam';
-const stadiumCamImg = new Image();
-stadiumCamImg.src = '/images/stadium_tifo_night.png';
+// QR Badges Generator Elements
+const qrStadiumSelect = document.getElementById('qrStadiumSelect') as HTMLSelectElement;
+const qrSectorSelect = document.getElementById('qrSectorSelect') as HTMLSelectElement;
+const qrRowInput = document.getElementById('qrRowInput') as HTMLInputElement;
+const qrSeatCountInput = document.getElementById('qrSeatCountInput') as HTMLInputElement;
+const btnGenerateBadges = document.getElementById('btnGenerateBadges') as HTMLButtonElement;
+const btnGenerateCurrentGridBadges = document.getElementById('btnGenerateCurrentGridBadges') as HTMLButtonElement;
+const btnPrintQrSheet = document.getElementById('btnPrintQrSheet') as HTMLButtonElement;
+const btnJumpQr = document.getElementById('btnJumpQr') as HTMLButtonElement;
+const qrBadgesContainer = document.getElementById('qrBadgesContainer') as HTMLElement;
 
-let isSimulationMode = false;
-let cameraStream: MediaStream | null = null;
-let isScanning = false;
-let currentOutsideMode: OutsideCadreMode = 'black';
-let activeTifoType: TifoPresetType = 'algeria_flag';
-let currentCadre: CadreBox = { ...PRESET_CADRES.full };
-let currentShow: ShowFile | null = null;
+// State: Dimensions (Starting 1x1 up to NxM)
+let gridCols = 60;
+let gridRows = 40;
+let seatColors: string[] = [];
+let currentPattern = 'algeria_flag';
 let customImageCanvas: HTMLCanvasElement | null = null;
+let currentShow: ShowFile | null = null;
 
-// Registry of REAL devices connected right now
-const realDevices = new Map<string, PresenceDevice>();
-// Connected seat indices (for stadium canvas and cadre calculations)
+// Connected devices registry
 let activeSeatIndices = new Set<number>();
 
-// BroadcastChannels for local zero-latency tab communication
+// Broadcast channel
 const controlChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('rayati_control') : null;
-const presenceChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('rayati_presence') : null;
 
-// Listen to local presence channel
-presenceChannel?.addEventListener('message', (event) => {
-  if (event.data?.type === 'heartbeat' && event.data.device) {
-    const dev = event.data.device as PresenceDevice;
-    realDevices.set(dev.deviceId, dev);
-    updateFromPresence();
-  }
-});
+// Audio beat reaction state
+let beatFlashAlpha = 0;
 
-// Clock updates
+// Master Clock
 function updateClock(): void {
   const now = new Date();
   const h = String(now.getHours()).padStart(2, '0');
@@ -101,873 +79,562 @@ function updateClock(): void {
 }
 setInterval(updateClock, 50);
 
-// Fetch real presence from Cloudflare API every 2.5 seconds
-async function syncLivePresence(): Promise<void> {
-  const res = await fetchLivePresence();
-  const now = Date.now();
-
-  // Clean stale devices older than 20 seconds
-  for (const [id, dev] of realDevices.entries()) {
-    if (now - dev.lastSeen > 20000) realDevices.delete(id);
-  }
-
-  // Merge incoming devices from Cloudflare
-  for (const dev of res.devices) {
-    realDevices.set(dev.deviceId, dev);
-  }
-
-  updateFromPresence();
-}
-
-setInterval(() => void syncLivePresence(), 2500);
-void syncLivePresence();
-
-refreshPresenceBtn?.addEventListener('click', () => {
-  void syncLivePresence();
-});
-
-// Toggle between 100% Real Devices and Simulated 8,420 Stadium Test Mode
-toggleDataModeBtn?.addEventListener('click', () => {
-  isSimulationMode = !isSimulationMode;
-  if (isSimulationMode) {
-    toggleDataModeBtn.textContent = '🔴 العودة إلى البيانات الحقيقية فقط';
-    toggleDataModeBtn.className = 'btn btn--primary btn--sm';
-    if (dataSourceLabel) dataSourceLabel.textContent = 'وضع المحاكاة الكاملة (+8,420 افتراضي)';
-  } else {
-    toggleDataModeBtn.textContent = '🧪 تجربة وضع المحاكاة (+8,420 افتراضي)';
-    toggleDataModeBtn.className = 'btn btn--secondary btn--sm';
-    if (dataSourceLabel) dataSourceLabel.textContent = 'بيانات حية 100% (Real Live Devices)';
-  }
-  updateFromPresence();
-});
-
-// Recompute active seat indices and update UI
-function updateFromPresence(): void {
+// Real-time presence via WebSocket & BroadcastChannel
+realtimeSync.onPresence((devices) => {
   activeSeatIndices = new Set<number>();
-
-  if (isSimulationMode) {
-    // Fill 8,420 mock seats for stadium rehearsal preview
-    for (let i = 0; i < 8420; i++) {
-      activeSeatIndices.add(i);
-    }
-  } else {
-    // 100% REAL LIVE DEVICES
-    let unassignedCounter = 0;
-    for (const dev of realDevices.values()) {
-      if (dev.seat && typeof dev.seat.index === 'number' && dev.seat.index >= 0) {
-        activeSeatIndices.add(dev.seat.index);
-      } else {
-        // If device has no locked seat yet, map to first available seats in Section A
-        activeSeatIndices.add(unassignedCounter);
-        unassignedCounter++;
-      }
+  let unassignedIndex = 0;
+  for (const dev of devices) {
+    if (dev.seat && typeof dev.seat.index === 'number' && dev.seat.index >= 0) {
+      activeSeatIndices.add(dev.seat.index);
+    } else {
+      activeSeatIndices.add(unassignedIndex % (gridCols * gridRows || 1));
+      unassignedIndex++;
     }
   }
+  const countStr = `${devices.length} هاتف متصل حياً`;
+  if (devicesLiveCount) devicesLiveCount.textContent = countStr;
+  if (kpiConnected) kpiConnected.textContent = String(devices.length);
+});
 
-  renderDevicesList();
-  updateTelemetry();
+// Seat Grid Dimensions Logic (1x1 to NxM)
+function setGridDimensions(cols: number, rows: number, sectorName = 'المصفوفة'): void {
+  gridCols = Math.max(1, Math.min(150, cols));
+  gridRows = Math.max(1, Math.min(150, rows));
+
+  if (gridColsInput) gridColsInput.value = String(gridCols);
+  if (gridRowsInput) gridRowsInput.value = String(gridRows);
+
+  const total = gridCols * gridRows;
+  if (totalSeatsDisplay) totalSeatsDisplay.textContent = total.toLocaleString();
+  if (gridDimBadge) gridDimBadge.textContent = `${gridCols} × ${gridRows}`;
+  if (canvasStatusLabel) {
+    canvasStatusLabel.textContent = `مصفوفة ${sectorName} (${gridCols}×${gridRows}) · ${total.toLocaleString()} مقعد نشط`;
+  }
+
+  [
+    btnSector1x1,
+    btnSector2x2,
+    btnSector4x4,
+    btnSector8x8,
+    btnSectorUltras,
+    btnSectorGrandstand,
+    btnSectorFull,
+  ].forEach((b) => b?.classList.remove('active'));
+
+  if (gridCols === 1 && gridRows === 1) btnSector1x1?.classList.add('active');
+  else if (gridCols === 2 && gridRows === 2) btnSector2x2?.classList.add('active');
+  else if (gridCols === 4 && gridRows === 4) btnSector4x4?.classList.add('active');
+  else if (gridCols === 8 && gridRows === 8) btnSector8x8?.classList.add('active');
+  else if (gridCols === 60 && gridRows === 40) btnSectorUltras?.classList.add('active');
+  else if (gridCols === 80 && gridRows === 50) btnSectorGrandstand?.classList.add('active');
+  else if (gridCols === 100 && gridRows === 84) btnSectorFull?.classList.add('active');
+
+  recomputeSeatColors();
+  rebuildAndBroadcast();
 }
 
-// Render the list of real connected phones in the UI
-function renderDevicesList(): void {
-  const devices = Array.from(realDevices.values());
-  if (devicesListCount) devicesListCount.textContent = String(devices.length);
+btnApplyCustomDimensions?.addEventListener('click', () => {
+  const c = Number(gridColsInput?.value) || 1;
+  const r = Number(gridRowsInput?.value) || 1;
+  setGridDimensions(c, r, 'مخصصة');
+});
 
-  if (!devicesContainer) return;
+gridColsInput?.addEventListener('change', () => {
+  setGridDimensions(Number(gridColsInput.value) || 1, gridRows, 'مخصصة');
+});
 
-  if (devices.length === 0) {
-    devicesContainer.innerHTML = `
-      <div class="device-item" style="color: var(--c-text-muted); justify-content: center;">
-        في انتظار دخول أول هاتف إلى rayati.pages.dev ...
-      </div>
-    `;
-    return;
+gridRowsInput?.addEventListener('change', () => {
+  setGridDimensions(gridCols, Number(gridRowsInput.value) || 1, 'مخصصة');
+});
+
+btnSector1x1?.addEventListener('click', () => setGridDimensions(1, 1, 'اختبار هاتف واحد'));
+btnSector2x2?.addEventListener('click', () => setGridDimensions(2, 2, 'تجربة 4 هواتف'));
+btnSector4x4?.addEventListener('click', () => setGridDimensions(4, 4, 'مكعب 16 هاتف'));
+btnSector8x8?.addEventListener('click', () => setGridDimensions(8, 8, 'مصفوفة 64 هاتف'));
+btnSectorUltras?.addEventListener('click', () => setGridDimensions(60, 40, 'المنعرج الشمالي'));
+btnSectorGrandstand?.addEventListener('click', () => setGridDimensions(80, 50, 'المدرج الشرفي'));
+btnSectorFull?.addEventListener('click', () => setGridDimensions(100, 84, 'الملعب الكامل'));
+
+// Sample Tifo Image or Pattern across grid
+function recomputeSeatColors(): void {
+  const total = gridCols * gridRows;
+  seatColors = new Array(total);
+
+  if (customImageCanvas) {
+    const ctx = customImageCanvas.getContext('2d');
+    if (ctx) {
+      const imgData = ctx.getImageData(0, 0, gridCols, gridRows).data;
+      for (let i = 0; i < total; i++) {
+        const r = imgData[i * 4];
+        const g = imgData[i * 4 + 1];
+        const b = imgData[i * 4 + 2];
+        const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+        seatColors[i] = hex;
+      }
+      return;
+    }
   }
 
-  devicesContainer.innerHTML = '';
-  devices.forEach((dev, idx) => {
-    const item = document.createElement('div');
-    item.className = 'device-item';
-    const isVal = Boolean(dev.validated);
-    const statusPill = isVal
-      ? `<span class="pill pill--ok" style="font-size: 10px; padding: 2px 6px;">✅ تم التثبيت</span>`
-      : `<span class="pill pill--warn" style="font-size: 10px; padding: 2px 6px;">⏳ وميض نشط</span>`;
-    const seatLabel = dev.seat ? `${dev.seat.section} · صف ${dev.seat.row} · مقعد ${dev.seat.seat}` : `تحديد آلي`;
-    const secondsAgo = Math.max(0, Math.round((Date.now() - dev.lastSeen) / 1000));
+  for (let r = 0; r < gridRows; r++) {
+    for (let c = 0; c < gridCols; c++) {
+      const idx = r * gridCols + c;
+      const normCol = gridCols > 1 ? c / (gridCols - 1) : 0.5;
+      const normRow = gridRows > 1 ? r / (gridRows - 1) : 0.5;
 
-    item.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="color: ${isVal ? 'var(--c-green-bright)' : 'var(--c-gold)'}; font-size: 10px;">●</span>
-        <strong style="color: #fff;">📱 هاتف #${idx + 1}</strong>
-        ${statusPill}
-        <span class="muted" style="font-size: 11px;">(${dev.deviceId.substring(0, 8)})</span>
-      </div>
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="color: var(--c-gold); font-family: var(--font-num); font-size: 11px;">${seatLabel}</span>
-        ${
-          !isVal
-            ? `<button type="button" class="btn btn--primary btn--sm" data-dev-val="${dev.deviceId}" style="font-size: 10px; padding: 2px 8px; background: var(--c-green-bright); color: #000; font-weight: 700;">تثبيت</button>`
-            : ''
+      if (currentPattern === 'algeria_flag') {
+        if (normCol < 0.46) {
+          seatColors[idx] = '#00A859';
+        } else if (normCol > 0.54) {
+          seatColors[idx] = '#FFFFFF';
+        } else {
+          const distToCenter = Math.hypot(normCol - 0.5, normRow - 0.5);
+          if (distToCenter < 0.16) {
+            seatColors[idx] = '#D21034';
+          } else {
+            seatColors[idx] = normCol < 0.5 ? '#00A859' : '#FFFFFF';
+          }
         }
-        <span class="muted" style="font-size: 10px;">${secondsAgo}ث</span>
-      </div>
-    `;
+      } else if (currentPattern === 'monogram_r') {
+        const inStem = normCol >= 0.25 && normCol <= 0.35 && normRow >= 0.2 && normRow <= 0.8;
+        const inTopBar = normCol >= 0.35 && normCol <= 0.65 && normRow >= 0.65 && normRow <= 0.8;
+        const inMidBar = normCol >= 0.35 && normCol <= 0.65 && normRow >= 0.45 && normRow <= 0.55;
+        const inLoopRight = normCol >= 0.6 && normCol <= 0.7 && normRow >= 0.55 && normRow <= 0.75;
+        const inLeg = normCol >= 0.45 && normCol <= 0.72 && normRow >= 0.2 && normRow <= 0.45 && Math.abs((normCol - 0.45) - (0.45 - normRow)) < 0.12;
 
-    const btnVal = item.querySelector<HTMLButtonElement>('[data-dev-val]');
-    btnVal?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      dev.validated = true;
-      if (!dev.seat) {
-        dev.seat = {
-          section: 'A',
-          row: 1,
-          seat: idx + 1,
-          index: idx,
-          key: `A-1-${idx + 1}`,
-          source: 'optical',
-        };
+        seatColors[idx] = inStem || inTopBar || inMidBar || inLoopRight || inLeg ? '#00A859' : '#0B132B';
+      } else if (currentPattern === 'stadium_wave') {
+        const wave = Math.sin(normCol * 6 + normRow * 2);
+        seatColors[idx] = wave > 0.3 ? '#38BDF8' : wave > -0.2 ? '#00A859' : '#0E1726';
+      } else if (currentPattern === 'gold_cyan') {
+        seatColors[idx] = (r + c) % 4 < 2 ? '#F59E0B' : '#38BDF8';
+      } else if (currentPattern === 'pure_white') {
+        seatColors[idx] = '#FFFFFF';
+      } else {
+        seatColors[idx] = '#00A859';
       }
-      await validateDevicesFromAdmin([dev.deviceId], false, dev.seat || undefined);
-      updateFromPresence();
-    });
-
-    devicesContainer.appendChild(item);
-  });
-}
-
-// Validate all connected phones and assign seats
-async function validateAllConnectedPhones(): Promise<void> {
-  const devices = Array.from(realDevices.values());
-  if (devices.length === 0) {
-    alert('لا يوجد أي هاتف متصل حالياً للتأكيد. افتح التطبيق في هاتف أو نافذة أخرى لتجربة التأكيد.');
-    return;
-  }
-
-  let seatIdx = 0;
-  for (const dev of realDevices.values()) {
-    dev.validated = true;
-    if (!dev.seat) {
-      dev.seat = {
-        section: 'A',
-        row: Math.floor(seatIdx / 20) + 1,
-        seat: (seatIdx % 20) + 1,
-        index: seatIdx,
-        key: `A-${Math.floor(seatIdx / 20) + 1}-${(seatIdx % 20) + 1}`,
-        source: 'optical',
-      };
-    }
-    seatIdx++;
-  }
-
-  await validateDevicesFromAdmin(undefined, true);
-  updateFromPresence();
-}
-
-// Telemetry updater
-function updateTelemetry(): void {
-  const totalConnected = activeSeatIndices.size;
-  if (connectedCountEl) connectedCountEl.textContent = totalConnected.toLocaleString();
-
-  const { seatsInfo } = analyzeCadreSeats(seats, currentCadre);
-  const connectedInCadre = countConnectedInCadre(seatsInfo, activeSeatIndices);
-
-  if (cadreCountEl) cadreCountEl.textContent = connectedInCadre.toLocaleString();
-  const pct = totalConnected > 0 ? ((connectedInCadre / totalConnected) * 100).toFixed(1) : '0';
-
-  if (cadrePctEl) {
-    if (currentCadre.id === 'full') {
-      cadrePctEl.textContent = `${totalConnected} هاتف (كامل المدرج)`;
-    } else {
-      cadrePctEl.textContent = `${pct}% من الهواتف المتصلة (${connectedInCadre} هاتف)`;
     }
   }
-
-  if (selectedCadreTitle) {
-    selectedCadreTitle.textContent = `الإطار المختار: ${currentCadre.name}`;
-  }
-  if (cadreStatsDetail) {
-    cadreStatsDetail.textContent = `${connectedInCadre.toLocaleString()} هاتف متصل داخل الإطار`;
-  }
-  if (cadreActiveModeLabel) {
-    cadreActiveModeLabel.textContent = `داخل ${currentCadre.name}`;
-  }
-
-  if (canvasHudText) {
-    canvasHudText.textContent = isSimulationMode
-      ? `SIMULATION · 8,420 VIRTUAL FANS`
-      : `REAL LIVE · ${totalConnected} REAL PHONE(S) CONNECTED`;
-  }
 }
 
-// Interactive Cadre Dragging / Resizing
-let isDraggingCadre = false;
-let dragStartX = 0;
-let dragStartY = 0;
-
-function setupCadreInteractions(): void {
-  const getCanvasCoords = (e: MouseEvent | TouchEvent) => {
-    const rect = standCanvas.getBoundingClientRect();
-    const clientX = 'touches' in e && e.touches[0] ? e.touches[0].clientX : (e as MouseEvent).clientX;
-    const clientY = 'touches' in e && e.touches[0] ? e.touches[0].clientY : (e as MouseEvent).clientY;
-    return {
-      x: Math.min(1, Math.max(0, (clientX - rect.left) / rect.width)),
-      y: Math.min(1, Math.max(0, (clientY - rect.top) / rect.height)),
-    };
-  };
-
-  const onPointerDown = (e: MouseEvent | TouchEvent) => {
-    isDraggingCadre = true;
-    const pos = getCanvasCoords(e);
-    dragStartX = pos.x;
-    dragStartY = pos.y;
-    currentCadre = {
-      id: 'custom',
-      name: 'إطار مخصص (Cadre ROI)',
-      xMin: pos.x,
-      yMin: pos.y,
-      xMax: pos.x + 0.01,
-      yMax: pos.y + 0.01,
-    };
-    updateCadreSelectionUI();
-    rebuildCurrentShow();
-  };
-
-  const onPointerMove = (e: MouseEvent | TouchEvent) => {
-    if (!isDraggingCadre) return;
-    const pos = getCanvasCoords(e);
-    currentCadre.xMin = Math.min(dragStartX, pos.x);
-    currentCadre.xMax = Math.max(dragStartX, pos.x);
-    currentCadre.yMin = Math.min(dragStartY, pos.y);
-    currentCadre.yMax = Math.max(dragStartY, pos.y);
-    updateTelemetry();
-  };
-
-  const onPointerUp = () => {
-    if (isDraggingCadre) {
-      isDraggingCadre = false;
-      if (currentCadre.xMax - currentCadre.xMin < 0.05) currentCadre.xMax = currentCadre.xMin + 0.1;
-      if (currentCadre.yMax - currentCadre.yMin < 0.05) currentCadre.yMax = currentCadre.yMin + 0.1;
-      rebuildCurrentShow();
-    }
-  };
-
-  standCanvas.addEventListener('mousedown', onPointerDown);
-  window.addEventListener('mousemove', onPointerMove);
-  window.addEventListener('mouseup', onPointerUp);
-
-  standCanvas.addEventListener('touchstart', onPointerDown, { passive: true });
-  window.addEventListener('touchmove', onPointerMove, { passive: true });
-  window.addEventListener('touchend', onPointerUp);
-}
-
-// Preset Cadre Buttons
-function updateCadreSelectionUI(): void {
-  document.querySelectorAll<HTMLButtonElement>('[data-cadre]').forEach((btn) => {
-    if (btn.dataset.cadre === currentCadre.id) {
-      btn.className = 'btn btn--primary btn--sm';
-    } else {
-      btn.className = 'btn btn--secondary btn--sm';
-    }
-  });
-}
-
-document.querySelectorAll<HTMLButtonElement>('[data-cadre]').forEach((btn) => {
+// Pattern Selection Handlers
+document.querySelectorAll('.btn-pattern').forEach((btn) => {
   btn.addEventListener('click', () => {
-    const cadreKey = btn.dataset.cadre;
-    if (cadreKey && PRESET_CADRES[cadreKey]) {
-      currentCadre = { ...PRESET_CADRES[cadreKey] };
-      updateCadreSelectionUI();
-      updateTelemetry();
-      rebuildCurrentShow();
-    }
+    document.querySelectorAll('.btn-pattern').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentPattern = (btn as HTMLElement).dataset.pattern || 'algeria_flag';
+    customImageCanvas = null;
+    recomputeSeatColors();
+    rebuildAndBroadcast();
   });
 });
 
-resetCadreBtn?.addEventListener('click', () => {
-  currentCadre = { ...PRESET_CADRES.full };
-  updateCadreSelectionUI();
-  updateTelemetry();
-  rebuildCurrentShow();
+// Custom Image Rasterizer
+imageFileInput?.addEventListener('change', () => {
+  const file = imageFileInput.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      customImageCanvas = document.createElement('canvas');
+      customImageCanvas.width = gridCols;
+      customImageCanvas.height = gridRows;
+      const ctx = customImageCanvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, gridCols, gridRows);
+        document.querySelectorAll('.btn-pattern').forEach((b) => b.classList.remove('active'));
+        recomputeSeatColors();
+        rebuildAndBroadcast();
+      }
+    };
+    img.src = e.target?.result as string;
+  };
+  reader.readAsDataURL(file);
 });
 
-// View Mode Controls: Stadium Cam vs Webcam vs Digital Grid
-function updateViewButtons(): void {
-  if (btnStadiumCam) btnStadiumCam.className = currentViewMode === 'stadium_cam' ? 'btn btn--primary btn--sm' : 'btn btn--secondary btn--sm';
-  if (btnWebcam) btnWebcam.className = currentViewMode === 'webcam' ? 'btn btn--primary btn--sm' : 'btn btn--secondary btn--sm';
-  if (btnGrid) btnGrid.className = currentViewMode === 'grid' ? 'btn btn--primary btn--sm' : 'btn btn--secondary btn--sm';
+// Build ShowFile & Broadcast via WebSocket MQTT
+function rebuildAndBroadcast(): void {
+  const seatCount = gridCols * gridRows;
+  const palette = Array.from(new Set(seatColors));
+  if (palette[0] !== '#000000') palette.unshift('#000000');
 
-  if (canvasHudText) {
-    if (currentViewMode === 'stadium_cam') {
-      canvasHudText.textContent = `STAND CAM 01 · 1080p 30 FPS · ACTIVE`;
-    } else if (currentViewMode === 'webcam') {
-      canvasHudText.textContent = `LIVE PC WEBCAM · 1080p · ACTIVE`;
+  const colorToIdx = new Map<string, number>();
+  palette.forEach((hex, i) => colorToIdx.set(hex, i));
+
+  const timelines: [number, number][][] = palette.map((_hex, i) => [
+    [i, 600000],
+  ]);
+
+  const seatTimelineMap = seatColors.map((hex) => colorToIdx.get(hex) || 0);
+  const runs: [number, number][] = [];
+  let curId = seatTimelineMap[0] || 0;
+  let curLen = 0;
+
+  for (let i = 0; i < seatCount; i++) {
+    if (seatTimelineMap[i] === curId) {
+      curLen++;
     } else {
-      canvasHudText.textContent = `STADIUM GRID · SEAT MAP`;
+      runs.push([curId, curLen]);
+      curId = seatTimelineMap[i];
+      curLen = 1;
     }
   }
-}
+  if (curLen > 0) runs.push([curId, curLen]);
 
-async function initWebcam(): Promise<void> {
+  currentShow = {
+    v: 1,
+    meta: {
+      id: `live-show-${Date.now()}`,
+      name: 'Rayti Live Show',
+      generatedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 86400000).toISOString(),
+      startAt: 0,
+      durationMs: 600000,
+      tickMs: 100,
+      seatCount,
+      acts: 1,
+      actMs: 600000,
+      title: {
+        ar: 'تيفو رايتي المباشر والمتزامن',
+        fr: 'Tifo Rayti en Direct',
+        en: 'Rayti Live Stadium Tifo',
+      },
+    },
+    palette,
+    timelines,
+    seatIndex: {
+      runs,
+    },
+  };
+
   try {
-    let stream: MediaStream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-      });
-    } catch {
-      stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    }
-    cameraStream = stream;
-    camVideo.srcObject = stream;
-    await camVideo.play();
-    currentViewMode = 'webcam';
-    updateViewButtons();
-  } catch (err) {
-    console.warn('Webcam permission denied or unavailable:', err);
-    currentViewMode = 'stadium_cam';
-    updateViewButtons();
+    localStorage.setItem('rayati_active_show', JSON.stringify(currentShow));
+  } catch {
+    // ignore
   }
+
+  // Broadcast command via WebSocket MQTT
+  realtimeSync.publish({
+    type: 'cube_colors',
+    colors: seatColors,
+    cols: gridCols,
+    rows: gridRows,
+    timestamp: Date.now(),
+  });
+
+  // Also broadcast via BroadcastChannel
+  controlChannel?.postMessage({
+    type: 'show_updated',
+    show: currentShow,
+  });
 }
 
-btnStadiumCam?.addEventListener('click', () => {
-  currentViewMode = 'stadium_cam';
-  if (cameraStream) {
-    cameraStream.getTracks().forEach((t) => t.stop());
-    cameraStream = null;
-  }
-  updateViewButtons();
+// Quick Action Handlers
+btnBroadcastShow?.addEventListener('click', () => {
+  rebuildAndBroadcast();
+  showStatusMessage('تم بث المشهد الضوئي والتيفو حياً لجميع هواتف الملعب بنجاح.');
 });
 
-btnWebcam?.addEventListener('click', async () => {
-  await initWebcam();
+btnCountdown10s?.addEventListener('click', () => {
+  realtimeSync.publish({ type: 'start_countdown', targetTime: Date.now() + 10000, timestamp: Date.now() });
+  showStatusMessage('بدأ العد التنازلي لـ 10 ثوانٍ على جميع شاشات الجماهير.');
 });
 
-btnGrid?.addEventListener('click', () => {
-  currentViewMode = 'grid';
-  if (cameraStream) {
-    cameraStream.getTracks().forEach((t) => t.stop());
-    cameraStream = null;
-  }
-  updateViewButtons();
+btnBlackout?.addEventListener('click', () => {
+  realtimeSync.publish({ type: 'blackout', timestamp: Date.now() });
+  showStatusMessage('تم إطفاء جميع شاشات المدرج (Blackout).');
 });
 
-// Admin phone validation buttons
-validateAllBtn?.addEventListener('click', () => {
-  void validateAllConnectedPhones();
+btnEndShow?.addEventListener('click', () => {
+  realtimeSync.publish({ type: 'end_show', timestamp: Date.now() });
+  showStatusMessage('تم إرسال أمر إنهاء العرض لجميع هواتف الملعب.');
 });
 
-quickValidateBtn?.addEventListener('click', () => {
-  void validateAllConnectedPhones();
+btnJumpQr?.addEventListener('click', () => {
+  document.getElementById('qrSection')?.scrollIntoView({ behavior: 'smooth' });
 });
 
-// In-Browser Optical CV Scanner (Scans and confirms detected phones)
-startScanBtn?.addEventListener('click', () => {
-  isScanning = !isScanning;
-  startScanBtn.textContent = isScanning ? '⏹️ إيقاف المسح' : '🔍 مسح بصري لحظي (CV Scan)';
-  startScanBtn.style.background = isScanning ? '#D21034' : 'var(--c-gold)';
+function showStatusMessage(msg: string): void {
+  if (!broadcastStatusMsg) return;
+  broadcastStatusMsg.textContent = msg;
+  broadcastStatusMsg.style.display = 'block';
+  window.setTimeout(() => {
+    broadcastStatusMsg.style.display = 'none';
+  }, 4000);
+}
 
-  if (hudDot) {
-    hudDot.className = isScanning ? 'hud-dot-rec hud-dot-rec--scanning' : 'hud-dot-rec';
-  }
-
-  if (isScanning) {
-    if (canvasHudText) canvasHudText.textContent = 'DECODING OPTICAL GRAY CODE ON WEBCAM FEED...';
-    setTimeout(async () => {
-      isScanning = false;
-      startScanBtn.textContent = '🔍 مسح بصري لحظي (CV Scan)';
-      startScanBtn.style.background = 'var(--c-gold)';
-      if (hudDot) hudDot.className = 'hud-dot-rec';
-      await validateAllConnectedPhones();
-    }, 2800);
-  }
-});
-
-// Render Main Stand Canvas (interactive phone dots + cadre overlay)
+// Draw Grandstand Canvas (Supports 1x1, 2x2, up to 150x150)
 function drawStandCanvas(): void {
-  const ctx = standCanvas.getContext('2d');
+  const ctx = standCanvas?.getContext('2d');
   if (!ctx) return;
 
-  const width = (standCanvas.width = standCanvas.parentElement?.clientWidth || 600);
-  const height = (standCanvas.height = standCanvas.parentElement?.clientHeight || 320);
+  const w = (standCanvas.width = standCanvas.parentElement?.clientWidth || 600);
+  const h = (standCanvas.height = 310);
 
-  ctx.clearRect(0, 0, width, height);
+  ctx.clearRect(0, 0, w, h);
 
-  // Background rendering based on View Mode
-  if (currentViewMode === 'webcam') {
-    if (camVideo.readyState >= 2) {
-      ctx.drawImage(camVideo, 0, 0, width, height);
-    } else {
-      ctx.fillStyle = '#060A10';
-      ctx.fillRect(0, 0, width, height);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-      ctx.font = '13px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('📹 جارٍ تشغيل كاميرا الحاسوب المباشرة...', width / 2, height / 2);
-      ctx.textAlign = 'start';
-    }
-  } else if (currentViewMode === 'stadium_cam') {
-    if (stadiumCamImg.complete && stadiumCamImg.naturalWidth > 0) {
-      ctx.drawImage(stadiumCamImg, 0, 0, width, height);
-      ctx.fillStyle = 'rgba(2, 4, 8, 0.42)';
-      ctx.fillRect(0, 0, width, height);
-    } else {
-      ctx.fillStyle = '#060A10';
-      ctx.fillRect(0, 0, width, height);
-    }
-  } else {
-    // Grid mode
-    ctx.fillStyle = '#060A10';
-    ctx.fillRect(0, 0, width, height);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.lineWidth = 1;
-    for (let c = 1; c < 10; c++) {
-      ctx.beginPath();
-      ctx.moveTo((c * width) / 10, 0);
-      ctx.lineTo((c * width) / 10, height);
-      ctx.stroke();
-    }
-    for (let r = 1; r < 5; r++) {
-      ctx.beginPath();
-      ctx.moveTo(0, (r * height) / 5);
-      ctx.lineTo(width, (r * height) / 5);
-      ctx.stroke();
-    }
+  // Background stadium haze
+  const bgGrad = ctx.createRadialGradient(w / 2, h / 2, 20, w / 2, h / 2, w / 1.5);
+  bgGrad.addColorStop(0, '#0C1B38');
+  bgGrad.addColorStop(1, '#040710');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, w, h);
+
+  // Audio flash overlay
+  if (beatFlashAlpha > 0) {
+    ctx.fillStyle = `rgba(16, 185, 129, ${beatFlashAlpha * 0.18})`;
+    ctx.fillRect(0, 0, w, h);
+    beatFlashAlpha = Math.max(0, beatFlashAlpha - 0.05);
   }
 
-  // Homography 3x3 Perspective Trapezoid for camera feeds
-  if (currentViewMode === 'webcam' || currentViewMode === 'stadium_cam') {
-    const p1 = { x: width * 0.1, y: height * 0.88 }; // Bottom Left
-    const p2 = { x: width * 0.9, y: height * 0.88 }; // Bottom Right
-    const p3 = { x: width * 0.78, y: height * 0.16 }; // Top Right
-    const p4 = { x: width * 0.22, y: height * 0.16 }; // Top Left
+  const paddingX = 28;
+  const paddingY = 28;
+  const availW = w - paddingX * 2;
+  const availH = h - paddingY * 2;
+  const stepX = gridCols > 1 ? availW / (gridCols - 1) : 0;
+  const stepY = gridRows > 1 ? availH / (gridRows - 1) : 0;
 
-    ctx.strokeStyle = isScanning ? '#D21034' : 'rgba(18, 194, 98, 0.85)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([8, 5]);
+  // Single seat mode (1x1)
+  if (gridCols === 1 && gridRows === 1) {
+    const x = w / 2;
+    const y = h / 2;
+    const colHex = seatColors[0] || '#00A859';
+
+    // Glowing halo
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
     ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
-    ctx.lineTo(p3.x, p3.y);
-    ctx.lineTo(p4.x, p4.y);
-    ctx.closePath();
+    ctx.arc(x, y, 54, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.3)';
+    ctx.beginPath();
+    ctx.arc(x, y, 40, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Main seat beacon
+    ctx.fillStyle = colHex;
+    ctx.beginPath();
+    ctx.arc(x, y, 26, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 2.5;
     ctx.stroke();
-    ctx.setLineDash([]);
 
-    // Corner reference markers
-    [p1, p2, p3, p4].forEach((p, idx) => {
-      ctx.fillStyle = '#D4AF37';
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.font = '10px monospace';
-      ctx.fillText(`P${idx + 1}`, p.x + 6, p.y + 3);
-    });
-  }
-
-  // Draw phone dots for active connected phones
-  const { seatsInfo } = analyzeCadreSeats(seats, currentCadre);
-  const dotRadius = Math.max(3.5, width / 180);
-
-  // If in real live mode and no phones yet, draw helpful prompt in canvas
-  if (!isSimulationMode && activeSeatIndices.size === 0) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-    ctx.font = '13px sans-serif';
+    // Text label
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 12px Cairo, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('📡 في انتظار دخول الهواتف إلى rayati.pages.dev...', width / 2, height / 2);
-    ctx.textAlign = 'start';
+    ctx.fillText('مقعد التجربة الوحيد (1×1)', x, y + 50);
+
+    requestAnimationFrame(drawStandCanvas);
+    return;
   }
 
-  for (let i = 0; i < seatsInfo.length; i++) {
-    const s = seatsInfo[i];
-    if (!s) continue;
-    const isConn = activeSeatIndices.has(s.seatIndex);
-    if (!isConn) continue;
+  // Multi-seat matrix (2x2 to NxM)
+  const dotRadius = Math.max(
+    2.2,
+    Math.min(18, Math.min(availW / gridCols, availH / gridRows) * 0.42),
+  );
 
-    const px = s.nx * width;
-    const py = s.ny * height;
+  for (let r = 0; r < gridRows; r++) {
+    for (let c = 0; c < gridCols; c++) {
+      const idx = r * gridCols + c;
+      const x = gridCols > 1 ? paddingX + c * stepX : w / 2;
+      const y = gridRows > 1 ? paddingY + r * stepY : h / 2;
+      const colHex = seatColors[idx] || '#00A859';
 
-    if (!isSimulationMode) {
-      // Real live device: draw glowing animated radar pulse!
-      const pulse = (Math.sin(Date.now() / 200) * 0.5 + 0.5) * 4;
-      ctx.strokeStyle = 'rgba(212, 175, 55, 0.6)';
-      ctx.lineWidth = 1.5;
+      ctx.fillStyle = colHex;
       ctx.beginPath();
-      ctx.arc(px, py, dotRadius + 4 + pulse, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.fillStyle = s.inCadre ? '#D4AF37' : '#12C262';
-      ctx.beginPath();
-      ctx.arc(px, py, dotRadius, 0, Math.PI * 2);
+      ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
       ctx.fill();
-    } else {
-      // Simulation mode
-      ctx.fillStyle = s.inCadre ? '#D4AF37' : 'rgba(10, 125, 62, 0.6)';
-      ctx.beginPath();
-      ctx.arc(px, py, 2, 0, Math.PI * 2);
-      ctx.fill();
+
+      // If active connected device, draw subtle cyan halo
+      if (activeSeatIndices.has(idx)) {
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.9)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(x, y, dotRadius + 3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
     }
-  }
-
-  // Draw Cadre Bounding Box
-  const bx = currentCadre.xMin * width;
-  const by = currentCadre.yMin * height;
-  const bw = (currentCadre.xMax - currentCadre.xMin) * width;
-  const bh = (currentCadre.yMax - currentCadre.yMin) * height;
-
-  // Semi-transparent overlay outside cadre
-  if (currentCadre.id !== 'full') {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-    ctx.fillRect(0, 0, width, by);
-    ctx.fillRect(0, by + bh, width, height - (by + bh));
-    ctx.fillRect(0, by, bx, bh);
-    ctx.fillRect(bx + bw, by, width - (bx + bw), bh);
-  }
-
-  // Neon glowing bounding box
-  ctx.strokeStyle = '#D4AF37';
-  ctx.lineWidth = 2.5;
-  ctx.setLineDash([8, 6]);
-  ctx.strokeRect(bx, by, bw, bh);
-  ctx.setLineDash([]);
-
-  // Corner resize handles
-  const handleSize = 7;
-  ctx.fillStyle = '#12C262';
-  const corners = [
-    { x: bx, y: by },
-    { x: bx + bw, y: by },
-    { x: bx, y: by + bh },
-    { x: bx + bw, y: by + bh },
-  ];
-  corners.forEach((c) => {
-    ctx.fillRect(c.x - handleSize / 2, c.y - handleSize / 2, handleSize, handleSize);
-  });
-
-  // Label tag above cadre
-  ctx.fillStyle = 'rgba(212, 175, 55, 0.9)';
-  ctx.fillRect(bx, Math.max(0, by - 22), 160, 20);
-  ctx.fillStyle = '#000';
-  ctx.font = 'bold 11px sans-serif';
-  ctx.fillText(`إطار: ${currentCadre.name.substring(0, 18)}`, bx + 6, Math.max(14, by - 8));
-
-  // Laser scanner animation
-  if (isScanning) {
-    const scanY = (Math.sin(Date.now() / 250) * 0.5 + 0.5) * height;
-    ctx.strokeStyle = '#D21034';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, scanY);
-    ctx.lineTo(width, scanY);
-    ctx.stroke();
   }
 
   requestAnimationFrame(drawStandCanvas);
 }
 
-// Render Realistic Pitch-View Preview
-function drawPitchPreview(): void {
-  const ctx = previewCanvas.getContext('2d');
+// Hover over stand canvas to see seat coordinates
+standCanvas.addEventListener('mousemove', (e) => {
+  if (gridCols === 1 && gridRows === 1) {
+    if (canvasStatusLabel) {
+      canvasStatusLabel.textContent = 'المقعد المحدد: الصف 1 · المقعد 1 · الرمز: VN-1-1 (مقعد الاختبار الوحيد)';
+    }
+    return;
+  }
+
+  const rect = standCanvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  const paddingX = 28;
+  const paddingY = 28;
+  const availW = rect.width - paddingX * 2;
+  const availH = rect.height - paddingY * 2;
+
+  const col = Math.round(((mouseX - paddingX) / (availW || 1)) * (gridCols - 1)) + 1;
+  const row = Math.round(((mouseY - paddingY) / (availH || 1)) * (gridRows - 1)) + 1;
+
+  if (col >= 1 && col <= gridCols && row >= 1 && row <= gridRows) {
+    if (canvasStatusLabel) {
+      canvasStatusLabel.textContent = `المقعد المحدد: الصف ${row} · المقعد ${col} · الرمز: VN-${row}-${col}`;
+    }
+  }
+});
+
+// Audio Visualizer
+audioEngine.onBeat(() => {
+  beatFlashAlpha = 1.0;
+});
+
+btnAudioToggle?.addEventListener('click', () => {
+  const isPlaying = audioEngine.toggle();
+  btnAudioToggle.textContent = isPlaying ? 'إيقاف إيقاع الملعب' : 'تشغيل إيقاع الملعب';
+  if (isPlaying) {
+    btnAudioToggle.classList.remove('btn-chip--gold');
+    btnAudioToggle.classList.add('btn-chip--green');
+  } else {
+    btnAudioToggle.classList.remove('btn-chip--green');
+    btnAudioToggle.classList.add('btn-chip--gold');
+  }
+});
+
+bpmSelect?.addEventListener('change', () => {
+  const val = Number(bpmSelect.value) || 128;
+  audioEngine.setBpm(val);
+  if (kpiBpm) kpiBpm.textContent = String(val);
+  if (bpmStatusLabel) bpmStatusLabel.textContent = `${val} BPM`;
+});
+
+rhythmEffectSelect?.addEventListener('change', () => {
+  audioEngine.setEffect(rhythmEffectSelect.value as RhythmEffect);
+});
+
+function drawAudioVisualizer(): void {
+  const ctx = audioVisualizerCanvas?.getContext('2d');
   if (!ctx) return;
 
-  const w = (previewCanvas.width = previewCanvas.parentElement?.clientWidth || 340);
-  const h = (previewCanvas.height = previewCanvas.parentElement?.clientHeight || 200);
+  const w = (audioVisualizerCanvas.width = audioVisualizerCanvas.parentElement?.clientWidth || 300);
+  const h = (audioVisualizerCanvas.height = 50);
 
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = '#000407';
-  ctx.fillRect(0, 0, w, h);
+  const freqData = audioEngine.getFrequencyData();
+  const bars = 36;
+  const barWidth = w / bars - 2;
 
-  if (!currentShow) return;
+  for (let i = 0; i < bars; i++) {
+    const rawVal = freqData[i * 2] || 0;
+    const barHeight = Math.max(3, (rawVal / 255) * h);
+    const x = i * (barWidth + 2);
+    const y = h - barHeight;
 
-  const palette = currentShow.palette;
-  const { seatsInfo } = analyzeCadreSeats(seats, currentCadre);
-  const runs = currentShow.seatIndex.runs;
+    const grad = ctx.createLinearGradient(0, y, 0, h);
+    grad.addColorStop(0, '#10B981');
+    grad.addColorStop(1, '#064E3B');
+    ctx.fillStyle = grad;
+    ctx.fillRect(x, y, barWidth, barHeight);
+  }
 
-  const seatColors: string[] = new Array(seats.total);
-  let curSeat = 0;
-  for (const [timelineIdx, count] of runs) {
-    const timeline = currentShow.timelines[timelineIdx];
-    const initialPaletteIdx = timeline?.[0]?.[0] ?? 0;
-    const color = palette[initialPaletteIdx] || '#000000';
-    for (let c = 0; c < count && curSeat < seats.total; c++) {
-      seatColors[curSeat] = color;
-      curSeat++;
+  requestAnimationFrame(drawAudioVisualizer);
+}
+
+// REAL STADIUM SEAT QR BADGES STUDIO
+async function generateStadiumQrBadges(customItems?: Array<{ stadium: string; sector: string; row: number; seat: number }>): Promise<void> {
+  if (!qrBadgesContainer) return;
+  qrBadgesContainer.innerHTML = '';
+
+  const stadiumName = qrStadiumSelect?.value || 'Nelson Mandela';
+  const sector = qrSectorSelect?.value || 'VN';
+  const sectorLabel = qrSectorSelect?.options[qrSectorSelect.selectedIndex]?.text || 'المنعرج الشمالي';
+
+  const itemsToGenerate = customItems || [];
+  if (itemsToGenerate.length === 0) {
+    const row = Number(qrRowInput?.value) || 1;
+    const count = Math.min(100, Math.max(1, Number(qrSeatCountInput?.value) || 12));
+    for (let s = 1; s <= count; s++) {
+      itemsToGenerate.push({ stadium: stadiumName, sector, row, seat: s });
     }
   }
 
-  for (let i = 0; i < seatsInfo.length; i++) {
-    const s = seatsInfo[i];
-    if (!s) continue;
-    if (!activeSeatIndices.has(s.seatIndex)) continue;
+  const qrBaseUrlInput = document.getElementById('qrBaseUrlInput') as HTMLInputElement | null;
+  const rawBaseUrl = qrBaseUrlInput?.value?.trim() || 'https://rayati.pages.dev';
+  // Guarantee printed stadium QR codes NEVER leak localhost!
+  const targetBaseUrl = rawBaseUrl.includes('localhost') || rawBaseUrl.includes('127.0.0.1')
+    ? 'https://rayati.pages.dev'
+    : rawBaseUrl.replace(/\/+$/, '');
 
-    const col = seatColors[s.seatIndex] || '#000000';
-    if (col === '#000000') continue;
+  for (const item of itemsToGenerate) {
+    const seatRef = `${item.sector}-${item.row}-${item.seat}`;
+    const directUrl = `${targetBaseUrl}/?s=${seatRef}`;
 
-    const pitchX = (s.nx - 0.5) * (0.6 + s.ny * 0.4) + 0.5;
-    const px = pitchX * w;
-    const py = (0.2 + s.ny * 0.75) * h;
+    // Generate high quality QR Code Data URL
+    const qrDataUrl = await QRCode.toDataURL(directUrl, {
+      width: 180,
+      margin: 1,
+      color: {
+        dark: '#070B14',
+        light: '#FFFFFF',
+      },
+    });
 
-    ctx.fillStyle = col;
-    ctx.beginPath();
-    ctx.arc(px, py, 3.5, 0, Math.PI * 2);
-    ctx.fill();
+    const card = document.createElement('div');
+    card.className = 'seat-qr-card';
+    card.innerHTML = `
+      <img src="/icons/rayati_mark.svg" class="badge-logo" alt="Rayti" />
+      <div class="seat-qr-stadium">${item.stadium}</div>
+      <div style="font-size: 10px; font-weight: 800; color: #008B7A;">${sectorLabel}</div>
+      <img src="${qrDataUrl}" class="seat-qr-badge-img" alt="QR ${seatRef}" />
+      <div class="seat-qr-coords">صف ${item.row} · مقعد ${item.seat}</div>
+      <div style="font-size: 9px; font-family: monospace; color: #64748B;">${seatRef}</div>
+      <div class="seat-qr-instructions">امسح الكود ليضيء مقعدك في التيفو الحي</div>
+    `;
+
+    qrBadgesContainer.appendChild(card);
   }
 }
 
-// Rebuild Show payload based on active Cadre + Image or Preset
-function rebuildCurrentShow(): void {
-  if (customImageCanvas) {
-    const ctx = customImageCanvas.getContext('2d');
-    if (ctx) {
-      const imgData = ctx.getImageData(0, 0, customImageCanvas.width, customImageCanvas.height);
-      currentShow = generateShowFromImage(
-        seats,
-        currentCadre,
-        { width: imgData.width, height: imgData.height, data: imgData.data },
-        currentOutsideMode,
-      );
-    }
-  } else {
-    currentShow = generateShowWithCadrePreset(
-      seats,
-      currentCadre,
-      activeTifoType,
-      currentOutsideMode,
-    );
-  }
+// Generate for Current Grid Matrix (1x1, 2x2, 4x4, etc.)
+btnGenerateCurrentGridBadges?.addEventListener('click', () => {
+  const stadiumName = qrStadiumSelect?.value || 'Nelson Mandela';
+  const sector = qrSectorSelect?.value || 'VN';
+  const total = gridCols * gridRows;
+  const maxBadges = Math.min(total, 64); // Max 64 badges for smooth preview
 
-  // Save to localStorage and broadcast to local tabs
-  if (currentShow) {
-    try {
-      localStorage.setItem('rayati_active_show', JSON.stringify(currentShow));
-      controlChannel?.postMessage({ type: 'show_updated', show: currentShow });
-
-      // Also post to Cloudflare API so remote phones receive it
-      void fetch('/api/show', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ type: 'change_tifo', tifo: activeTifoType, show: currentShow }),
-      }).catch(() => {});
-    } catch {
-      // quota fallback
-    }
-  }
-
-  drawPitchPreview();
-  updateTelemetry();
-}
-
-// Mode Tabs
-tabPresets?.addEventListener('click', () => {
-  tabPresets.classList.add('mode-tab--active');
-  tabImages.classList.remove('mode-tab--active');
-  presetsPanel.style.display = 'block';
-  imagesPanel.style.display = 'none';
-  customImageCanvas = null;
-  rebuildCurrentShow();
-});
-
-tabImages?.addEventListener('click', () => {
-  tabImages.classList.add('mode-tab--active');
-  tabPresets.classList.remove('mode-tab--active');
-  imagesPanel.style.display = 'flex';
-  presetsPanel.style.display = 'none';
-  if (!customImageCanvas) loadEmblemPreset('crescent_gold');
-});
-
-// Preset Buttons
-const tifoLabels: Record<TifoPresetType, string> = {
-  algeria_flag: 'علم الجزائر 🇩🇿',
-  stadium_wave: 'موجة OLA 🌊',
-  ultras_strobe: 'كراكاج الألتراس ⚡',
-  club_mca: 'مولودية الجزائر 🟢🔴',
-  club_usma: 'اتحاد العاصمة 🔴⚫',
-  club_jsk: 'شبيبة القبائل 🟡🟢',
-  club_crb: 'شباب بلوزداد 🔴⚪',
-  club_ess: 'وفاق سطيف ⚪⚫',
-  giant_text: 'كتابة عملاقة ✍️',
-};
-
-document.querySelectorAll<HTMLButtonElement>('[data-tifo]').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    const tifo = btn.dataset.tifo as TifoPresetType;
-    if (tifo) {
-      activeTifoType = tifo;
-      customImageCanvas = null;
-      if (activeTifoLabel) activeTifoLabel.textContent = tifoLabels[tifo] || tifo;
-
-      document.querySelectorAll('[data-tifo]').forEach((b) => b.classList.remove('btn--primary'));
-      btn.classList.add('btn--primary');
-
-      rebuildCurrentShow();
-    }
-  });
-});
-
-// Image file upload handler
-imageFileInput?.addEventListener('change', (e) => {
-  const file = (e.target as HTMLInputElement).files?.[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = (loadEvent) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 64;
-      canvas.height = 32;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        customImageCanvas = canvas;
-        if (activeTifoLabel) activeTifoLabel.textContent = `صورة: ${file.name.substring(0, 16)}`;
-        rebuildCurrentShow();
+  const items: Array<{ stadium: string; sector: string; row: number; seat: number }> = [];
+  let count = 0;
+  for (let r = 1; r <= gridRows; r++) {
+    for (let c = 1; c <= gridCols; c++) {
+      if (count < maxBadges) {
+        items.push({ stadium: stadiumName, sector, row: r, seat: c });
+        count++;
       }
-    };
-    img.src = loadEvent.target?.result as string;
-  };
-  reader.readAsDataURL(file);
-});
-
-// Emblem presets (Golden Crescent, Palestine/Algeria, Ultras Torch)
-function loadEmblemPreset(type: string): void {
-  const canvas = document.createElement('canvas');
-  canvas.width = 64;
-  canvas.height = 32;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  if (type === 'crescent_gold') {
-    ctx.fillStyle = '#0A7D3E';
-    ctx.fillRect(0, 0, canvas.width / 2, canvas.height);
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(canvas.width / 2, 0, canvas.width / 2, canvas.height);
-
-    ctx.fillStyle = '#D4AF37';
-    ctx.beginPath();
-    ctx.arc(32, 16, 9, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#0A7D3E';
-    ctx.beginPath();
-    ctx.arc(34, 16, 7.5, 0, Math.PI * 2);
-    ctx.fill();
-    if (activeTifoLabel) activeTifoLabel.textContent = '🌙 هلال ونجمة ذهبية';
-  } else if (type === 'palestine_dz') {
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, canvas.width, 10);
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 10, canvas.width, 11);
-    ctx.fillStyle = '#0A7D3E';
-    ctx.fillRect(0, 21, canvas.width, 11);
-    ctx.fillStyle = '#D21034';
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(22, 16);
-    ctx.lineTo(0, 32);
-    ctx.closePath();
-    ctx.fill();
-    if (activeTifoLabel) activeTifoLabel.textContent = '🇵🇸🇩🇿 خاوة خاوة';
-  } else {
-    ctx.fillStyle = '#D21034';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#D4AF37';
-    ctx.beginPath();
-    ctx.arc(32, 16, 11, 0, Math.PI * 2);
-    ctx.fill();
-    if (activeTifoLabel) activeTifoLabel.textContent = '🔥 شعلة الألتراس';
+    }
   }
 
-  customImageCanvas = canvas;
-  rebuildCurrentShow();
-}
-
-document.querySelectorAll<HTMLButtonElement>('[data-emblem]').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    const emblem = btn.dataset.emblem;
-    if (emblem) loadEmblemPreset(emblem);
-  });
+  void generateStadiumQrBadges(items);
+  showStatusMessage(`تم توليد ${items.length} شارة ملصق للمصفوفة الحالية (${gridCols}×${gridRows}) جاهزة للطباعة.`);
 });
 
-// Outside mode selector
-outsideModeSelect?.addEventListener('change', () => {
-  currentOutsideMode = outsideModeSelect.value as OutsideCadreMode;
-  rebuildCurrentShow();
+btnGenerateBadges?.addEventListener('click', () => {
+  void generateStadiumQrBadges();
 });
 
-// Master Kickoff Controls
-kickoff10sBtn?.addEventListener('click', () => {
-  const targetTime = Date.now() + 10000;
-  localStorage.setItem('rayati_master_start', String(targetTime));
-  controlChannel?.postMessage({ type: 'start_countdown', targetTime });
-
-  // Broadcast to Cloudflare API
-  void fetch('/api/show', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ type: 'start_countdown', targetTime }),
-  }).catch(() => {});
-
-  countdownBanner.textContent = 'العد التنازلي انطلق: الدخلة تبدأ بعد 10 ثوانٍ !';
-  countdownBanner.className = 'pill pill--warn';
-
-  let remaining = 10;
-  const countInterval = setInterval(() => {
-    remaining--;
-    if (remaining > 0) {
-      countdownBanner.textContent = `الانطلاق بعد ${remaining} ثوانٍ...`;
-    } else {
-      clearInterval(countInterval);
-      countdownBanner.textContent = 'الدخلة مشتعلة الآن في الملعب! 🇩🇿';
-      countdownBanner.className = 'pill pill--ok';
-    }
-  }, 1000);
+btnPrintQrSheet?.addEventListener('click', () => {
+  window.print();
 });
 
-instantStartBtn?.addEventListener('click', () => {
-  const targetTime = Date.now();
-  controlChannel?.postMessage({ type: 'instant_start', targetTime });
-  void fetch('/api/show', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ type: 'instant_start', targetTime }),
-  }).catch(() => {});
-  countdownBanner.textContent = 'العرض انطلق فوري! 🇩🇿';
-  countdownBanner.className = 'pill pill--ok';
-});
-
-blackoutBtn?.addEventListener('click', () => {
-  controlChannel?.postMessage({ type: 'blackout' });
-  void fetch('/api/show', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ type: 'blackout' }),
-  }).catch(() => {});
-  countdownBanner.textContent = 'إطفاء الشاشات (Blackout نشط)';
-  countdownBanner.className = 'pill';
-});
-
-// Download show.json
-downloadShowBtn?.addEventListener('click', () => {
-  if (!currentShow) rebuildCurrentShow();
-  if (!currentShow) return;
-
-  const blob = new Blob([JSON.stringify(currentShow, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'show.json';
-  a.click();
-  URL.revokeObjectURL(url);
-});
-
-// Init
-setupCadreInteractions();
-updateViewButtons();
-updateFromPresence();
-rebuildCurrentShow();
-void initWebcam();
-requestAnimationFrame(drawStandCanvas);
+// Initialization
+setGridDimensions(60, 40, 'المنعرج الشمالي');
+drawStandCanvas();
+drawAudioVisualizer();
+void generateStadiumQrBadges();

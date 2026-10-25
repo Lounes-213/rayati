@@ -47,7 +47,7 @@ const seatsPath = join(publicDir, 'seats.json');
 // Mobile app shell downloaded by fans on first load (excluding desktop simulation & guide illustrations)
 const isMainShell = (file) => {
   if (file.endsWith('.json')) return false;
-  if (file.includes('simulation') || file.includes('guide') || file.includes('images')) return false;
+  if (file.includes('simulation') || file.includes('guide') || file.includes('images') || file.includes('control') || file.includes('three')) return false;
   return true;
 };
 const shell = shellFiles.filter(isMainShell);

@@ -20,20 +20,51 @@ export const createReadyScreen: ScreenFactory = (ctx: AppContext) => {
     attrs: { type: 'button' },
     on: { click: () => ctx.go('welcome') },
   });
-  inner.append(el('div', { class: 'topbar' }, back, createLangSwitch(i18n)));
+
+  const brandLogo = el(
+    'div',
+    { attrs: { style: 'display: flex; align-items: center; gap: 10px;' } },
+    el('img', {
+      attrs: {
+        src: '/icons/rayati_mark.svg',
+        alt: 'Rayti',
+        style: 'width: 34px; height: 34px; object-fit: contain;',
+      },
+    }),
+    el(
+      'div',
+      {},
+      el('div', {
+        attrs: { style: 'font-weight: 900; color: #0F172A; font-size: 1.15rem; line-height: 1.1;' },
+        text: 'رايتي · RAYTI',
+      }),
+      el('div', {
+        attrs: { style: 'font-size: 9px; color: #008B7A; font-weight: 800; letter-spacing: 0.05em;' },
+        text: 'STADIUM LIGHT SHOW',
+      }),
+    ),
+  );
+  inner.append(el('div', { class: 'topbar' }, back, brandLogo, createLangSwitch(i18n)));
 
   if (!state.seat || state.seat.index < 0) {
     inner.append(
       el(
         'div',
-        { class: 'card' },
-        el('h1', { class: 'section-title', text: 'بانتظار المسح الضوئي' }),
-        el('p', { class: 'card__hint', text: 'لم يتم تحديد موقع مقعدك بعد. يرجى تشغيل الوميض لتلتقط كاميرا المنصة موقعك تلقائياً.' }),
+        { class: 'card', attrs: { style: 'text-align: center; padding: 24px;' } },
+        el('img', {
+          attrs: {
+            src: '/icons/rayati_mark.svg',
+            alt: 'Rayti',
+            style: 'width: 64px; height: 64px; margin: 0 auto 14px; display: block; object-fit: contain;',
+          },
+        }),
+        el('h1', { class: 'section-title', text: 'بانتظار مسح رمز المقعد' }),
+        el('p', { class: 'card__hint', text: 'يرجى فتح كاميرا هاتفك ومسح رمز QR الملصق على ظهر مقعدك في المدرجات لتأكيد مكانك تلقائياً.' }),
         el('button', {
-          class: 'btn btn--primary btn--block',
-          text: '⚡ بدء المسح الضوئي (Gray Code)',
-          attrs: { type: 'button' },
-          on: { click: () => ctx.go('calibrate') },
+          class: 'btn btn--secondary btn--block',
+          text: 'العودة إلى الرئيسية',
+          attrs: { type: 'button', style: 'border-radius: var(--r-full); margin-top: 8px;' },
+          on: { click: () => ctx.go('welcome') },
         }),
       ),
     );
@@ -48,7 +79,7 @@ export const createReadyScreen: ScreenFactory = (ctx: AppContext) => {
       'div',
       { class: 'row row--between' },
       el('span', { class: 'card__title', text: t('ready.seatLabel') }),
-      el('span', { class: 'pill pill--ok' }, el('span', { class: 'pill__dot' }), 'تم التثبيت عبر كاميرا المنصة'),
+      el('span', { class: 'pill pill--ok' }, el('span', { class: 'pill__dot' }), 'تم التثبيت عبر رمز QR'),
     ),
     el(
       'div',
@@ -113,7 +144,7 @@ export const createReadyScreen: ScreenFactory = (ctx: AppContext) => {
   const brightnessCard = el(
     'div',
     { class: 'card' },
-    el('h2', { class: 'card__title', text: `☀ ${t('ready.brightness.title')}` }),
+    el('h2', { class: 'card__title', text: t('ready.brightness.title') }),
     el('p', { class: 'card__hint', text: t('ready.brightness.text') }),
   );
 
@@ -151,12 +182,7 @@ export const createReadyScreen: ScreenFactory = (ctx: AppContext) => {
     on: { click: () => ctx.go('show') },
   });
 
-  const calibrateButton = el('button', {
-    class: 'linkish',
-    text: t('ready.calibrate'),
-    attrs: { type: 'button' },
-    on: { click: () => ctx.go('calibrate') },
-  });
+
 
   function update(): void {
     // sync
@@ -219,7 +245,6 @@ export const createReadyScreen: ScreenFactory = (ctx: AppContext) => {
     ...(torchCard ? [torchCard] : []),
     preloadCard,
     el('p', { class: 'footer-note', text: t('show.hint') }),
-    calibrateButton,
   );
 
   let timer = 0;
@@ -287,7 +312,7 @@ function buildTorchCard(ctx: AppContext): HTMLElement {
   const card = el(
     'div',
     { class: 'card' },
-    el('h2', { class: 'card__title', text: `🔆 ${t('ready.torch.title')}` }),
+    el('h2', { class: 'card__title', text: t('ready.torch.title') }),
     el('p', { class: 'card__hint', text: t('ready.torch.text') }),
     toggle,
     status,

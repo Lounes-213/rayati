@@ -151,6 +151,14 @@ export function seatKey(ref: SeatRef): string {
 export function parseSeatKey(key: string | null | undefined): SeatRef | null {
   if (!key) return null;
   const parts = key.split('-');
+  if (parts.length === 2) {
+    const r = Number.parseInt(parts[0], 10);
+    const n = Number.parseInt(parts[1], 10);
+    if (Number.isInteger(r) && Number.isInteger(n)) {
+      return { section: 'A', row: r, seat: n };
+    }
+    return null;
+  }
   if (parts.length !== 3) return null;
   const [section, row, seat] = parts;
   const r = Number.parseInt(row, 10);
@@ -169,9 +177,19 @@ export function parseSeatParams(
   params: URLSearchParams,
   index: SeatIndex,
 ): { ref?: SeatRef; problem?: SeatProblem } {
+  const directKey = params.get('seat') ?? (params.get('s')?.includes('-') ? params.get('s') : null);
+  if (directKey && directKey.includes('-')) {
+    const parsed = parseSeatKey(directKey);
+    if (parsed) {
+      const check = checkSeat(index, parsed);
+      if (check.ok) return { ref: parsed };
+      if (check.problem === 'seatBlocked') return { problem: check.problem };
+      return { ref: parsed };
+    }
+  }
   const rawSection = params.get('s') ?? params.get('section');
   const rawRow = params.get('r') ?? params.get('row');
-  const rawSeat = params.get('n') ?? params.get('seat');
+  const rawSeat = params.get('n') ?? (params.get('seat') && !params.get('seat')?.includes('-') ? params.get('seat') : null);
   if (!rawSection || !rawRow || !rawSeat) return {};
   const ref: SeatRef = {
     section: rawSection.trim().toUpperCase(),
@@ -179,5 +197,7 @@ export function parseSeatParams(
     seat: Number.parseInt(rawSeat, 10),
   };
   const check = checkSeat(index, ref);
-  return check.ok ? { ref } : { problem: check.problem };
+  if (check.ok) return { ref };
+  if (check.problem === 'seatBlocked') return { problem: check.problem };
+  return { ref };
 }

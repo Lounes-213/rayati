@@ -1,5 +1,5 @@
 {
-  "app.name": "Rayati",
+  "app.name": "Rayti",
   "app.tagline": "Your phone, a pixel in a monumental stadium tifo",
   "app.pitch": "Thousands of smartphones in the stands merge into one giant illuminated light show.",
 
@@ -85,8 +85,8 @@
 
   "done.title": "Sensational Job, Supporters!",
   "done.lead": "You illuminated the stands and made stadium history. Capture the moment and share it.",
-  "done.share": "Share Rayati with Supporters",
-  "done.shareText": "I was a pixel in the massive Rayati stadium tifo 🟩⬜🟥 — Join the light show:",
+  "done.share": "Share Rayti with Supporters",
+  "done.shareText": "I was a pixel in the massive Rayti stadium tifo - Join the light show:",
   "done.again": "Replay Animation",
   "done.changeSeat": "Change Seat",
 
@@ -102,7 +102,7 @@
   "calibrate.successLead": "Stadium cameras recognized your seat and synchronized your pixel. Screen is now glowing green to confirm.",
   "calibrate.continue": "Proceed to Tifo Show",
 
-  "guide.title": "Rayati Supporter Guide",
+  "guide.title": "Rayti Supporter Guide",
   "guide.subtitle": "How smartphone tifos transform Algerian stadium atmosphere",
   "guide.badge": "Official Tutorial",
   "guide.step1.title": "1. Seat-Printed QR Code",
@@ -152,6 +152,6 @@
 
   "a11y.langSwitch": "Switch language",
   "a11y.progress": "Preload progress",
-  "a11y.logo": "Rayati logo: Algerian flag formed by smartphone light grid",
+  "a11y.logo": "Rayti logo: green pixelated R matrix",
   "a11y.seatGrid": "Seat position map"
 }

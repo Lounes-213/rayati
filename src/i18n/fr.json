@@ -1,5 +1,5 @@
 {
-  "app.name": "Rayati",
+  "app.name": "Rayti",
   "app.tagline": "Ton smartphone, un pixel du grand tifo lumineux",
   "app.pitch": "Des milliers de téléphones dans les tribunes forment une fresque lumineuse monumentale.",
 
@@ -85,8 +85,8 @@
 
   "done.title": "Chapeau les supporters !",
   "done.lead": "Le virage était en fusion. Immortalise cet instant et partage-le partout.",
-  "done.share": "Partager Rayati avec les supporters",
-  "done.shareText": "J'étais un pixel du grand tifo Rayati 🟩⬜🟥 — Le spectacle lumineux des stades :",
+  "done.share": "Partager Rayti avec les supporters",
+  "done.shareText": "J'étais un pixel du grand tifo Rayti — Le spectacle lumineux des stades :",
   "done.again": "Rejouer l'animation",
   "done.changeSeat": "Changer de place",
 
@@ -102,7 +102,7 @@
   "calibrate.successLead": "La caméra a verrouillé ton siège et synchronisé ton pixel. L'écran vert valide ta connexion.",
   "calibrate.continue": "Parfait, passer au Tifo",
 
-  "guide.title": "Guide du Supporter Rayati",
+  "guide.title": "Guide du Supporter Rayti",
   "guide.subtitle": "Comment le tifo sur smartphone révolutionne nos stades ?",
   "guide.badge": "Tutoriel Officiel",
   "guide.step1.title": "1. Le QR code collé sur ton siège",
@@ -152,6 +152,6 @@
 
   "a11y.langSwitch": "Changer de langue",
   "a11y.progress": "Progression du préchargement",
-  "a11y.logo": "Logo Rayati : drapeau algérien composé de pixels de téléphones",
+  "a11y.logo": "Logo Rayti : R en matrice de pixels verts",
   "a11y.seatGrid": "Grille de visualisation des sièges"
 }

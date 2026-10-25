@@ -1,39 +1,30 @@
 /**
- * /api/show — Shared active show and synchronized kickoff trigger.
- *
- * Admin posts commands (10s countdown target time, tifo switch, blackout).
- * Phones poll this endpoint to stay in sync with the stadium régie.
+ * /api/show — Lightweight stateless response.
+ * No Cloudflare KV operations are used (0 KV quota consumption).
  */
 
-let activeCommand = {
-  type: 'idle',
+let memoryState = {
+  type: 'cube_colors',
+  cols: 2,
+  rows: 2,
+  colors: ['#00A859', '#38BDF8', '#38BDF8', '#00A859'],
   targetTime: 0,
-  tifo: 'algeria_flag',
-  updatedAt: Date.now(),
+  updatedAt: 0,
 };
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost({ request }) {
   try {
     const data = await request.json();
-    activeCommand = {
+    memoryState = {
+      ...memoryState,
       ...data,
       updatedAt: Date.now(),
     };
 
-    if (env && env.RAYATI_PRESENCE) {
-      try {
-        await env.RAYATI_PRESENCE.put('active_command', JSON.stringify(activeCommand), {
-          expirationTtl: 300,
-        });
-      } catch {
-        // Continue
-      }
-    }
-
-    return new Response(JSON.stringify({ ok: true, activeCommand }), {
+    return new Response(JSON.stringify({ ok: true, memoryState }), {
       headers: {
         'content-type': 'application/json; charset=utf-8',
-        'cache-control': 'no-store, max-age=0',
+        'cache-control': 'no-store, no-cache, max-age=0',
         'access-control-allow-origin': '*',
       },
     });
@@ -45,20 +36,11 @@ export async function onRequestPost({ request, env }) {
   }
 }
 
-export async function onRequestGet({ env }) {
-  if (env && env.RAYATI_PRESENCE) {
-    try {
-      const val = await env.RAYATI_PRESENCE.get('active_command');
-      if (val) activeCommand = JSON.parse(val);
-    } catch {
-      // Continue with memory
-    }
-  }
-
-  return new Response(JSON.stringify(activeCommand), {
+export async function onRequestGet() {
+  return new Response(JSON.stringify(memoryState), {
     headers: {
       'content-type': 'application/json; charset=utf-8',
-      'cache-control': 'no-store, max-age=0',
+      'cache-control': 'no-store, no-cache, max-age=0',
       'access-control-allow-origin': '*',
     },
   });

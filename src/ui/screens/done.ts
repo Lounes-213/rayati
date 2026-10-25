@@ -16,7 +16,7 @@ export const createDoneScreen: ScreenFactory = (ctx: AppContext) => {
     on: {
       click: async () => {
         const outcome = await shareContent({
-          title: `راياتي · Rayati`,
+          title: `رايتي · Rayti`,
           text: t('done.shareText'),
           url: location.origin + location.pathname,
         });
@@ -54,9 +54,9 @@ export const createDoneScreen: ScreenFactory = (ctx: AppContext) => {
       }),
       el('button', {
         class: 'btn btn--ghost btn--block',
-        text: t('done.changeSeat'),
+        text: t('nav.back') || 'العودة إلى الرئيسية',
         attrs: { type: 'button' },
-        on: { click: () => ctx.go('seat') },
+        on: { click: () => ctx.go('welcome') },
       }),
     ),
     el('p', { class: 'footer-note', text: t('welcome.privacy') }),

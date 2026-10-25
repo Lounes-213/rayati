@@ -7,7 +7,7 @@
     <meta name="description" content="الدليل التقني والتعليمي الشامل لتيفو راياتي: الرؤية الحاسوبية (Computer Vision)، شفرة غراي (Gray Code)، والهوموجرافيا في الملاعب الجزائرية." />
     <meta name="theme-color" content="#05070A" />
     <meta name="color-scheme" content="dark" />
-    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icons/rayati_mark.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -182,16 +182,25 @@
   </head>
   <body class="guide-page">
     <header class="guide-nav-bar">
-      <div class="guide-container" style="display: flex; justify-content: space-between; align-items: center;">
-        <a href="/" class="btn btn--ghost btn--sm" style="text-decoration: none;">
-          <span class="ar-text">← العودة للتطبيق</span>
-          <span class="fr-text hidden">← Retour à l'app</span>
-          <span class="en-text hidden">← Back to App</span>
+      <div class="guide-container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <a href="/" style="display: flex; align-items: center; gap: 10px; text-decoration: none;">
+          <img src="/icons/rayati_mark.svg" alt="Rayti" style="width: 34px; height: 34px; object-fit: contain;" />
+          <div>
+            <div style="font-weight: 900; color: #FFF; font-size: 1.15rem; line-height: 1.1;">رايتي · RAYTI</div>
+            <div style="font-size: 10px; color: #00A859; font-weight: 800; letter-spacing: 0.05em;">GUIDE & ARCHITECTURE</div>
+          </div>
         </a>
-        <div class="lang">
-          <button type="button" class="lang__btn" data-lang="ar" aria-pressed="true">العربية</button>
-          <button type="button" class="lang__btn" data-lang="fr" aria-pressed="false">Français</button>
-          <button type="button" class="lang__btn" data-lang="en" aria-pressed="false">English</button>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <a href="/" class="btn btn--ghost btn--sm" style="text-decoration: none;">
+            <span class="ar-text">العودة للتطبيق</span>
+            <span class="fr-text hidden">Retour à l'app</span>
+            <span class="en-text hidden">Back to App</span>
+          </a>
+          <div class="lang">
+            <button type="button" class="lang__btn" data-lang="ar" aria-pressed="true">العربية</button>
+            <button type="button" class="lang__btn" data-lang="fr" aria-pressed="false">Français</button>
+            <button type="button" class="lang__btn" data-lang="en" aria-pressed="false">English</button>
+          </div>
         </div>
       </div>
     </header>
@@ -222,7 +231,6 @@
     <main class="guide-container">
       <div class="features-pill-grid">
         <div class="feature-box">
-          <div class="feature-box__icon">📹</div>
           <div class="feature-box__title">
             <span class="ar-text">رؤية حاسوبية</span>
             <span class="fr-text hidden">Computer Vision</span>
@@ -235,7 +243,6 @@
           </div>
         </div>
         <div class="feature-box">
-          <div class="feature-box__icon">📶</div>
           <div class="feature-box__title">
             <span class="ar-text">100% أوفلاين</span>
             <span class="fr-text hidden">100% Hors-ligne</span>
@@ -248,7 +255,6 @@
           </div>
         </div>
         <div class="feature-box">
-          <div class="feature-box__icon">🔒</div>
           <div class="feature-box__title">
             <span class="ar-text">خصوصية تامة</span>
             <span class="fr-text hidden">Confidentialité</span>
@@ -270,7 +276,6 @@
         </div>
         <div class="guide-step__body">
           <h2 class="guide-step__title">
-            <span>📹</span>
             <span class="ar-text">1. الكاميرا تتعرف على التيليفون (Computer Vision)</span>
             <span class="fr-text hidden">1. La Caméra repère ton téléphone (Computer Vision)</span>
             <span class="en-text hidden">1. Pitch Camera Locates Your Phone (Computer Vision)</span>
@@ -300,7 +305,6 @@
         </div>
         <div class="guide-step__body">
           <h2 class="guide-step__title">
-            <span>🟢</span>
             <span class="ar-text">2. التأكيد الأخضر اللحظي والاهتزاز</span>
             <span class="fr-text hidden">2. Validation Verte Instantanée & Haptique</span>
             <span class="en-text hidden">2. Instant Emerald Green & Haptic Lock</span>
@@ -327,7 +331,6 @@
         </div>
         <div class="guide-step__body">
           <h2 class="guide-step__title">
-            <span>🇩🇿</span>
             <span class="ar-text">3. ارفع هاتفك نحو أرضية الميدان</span>
             <span class="fr-text hidden">3. Lève ton écran face à la pelouse</span>
             <span class="en-text hidden">3. Hold Your Screen Facing the Pitch</span>
@@ -349,7 +352,6 @@
       <!-- Technical Deep Dive Box -->
       <div class="tech-card">
         <h3 class="tech-card__title">
-          <span>⚙️</span>
           <span class="ar-text">السر التقني: كيفاش يخدم بـ 0 داتابيز و0 دينار؟</span>
           <span class="fr-text hidden">Le Secret Technique : 0 Base de Données, 0 Coût</span>
           <span class="en-text hidden">The Technical Architecture: 0 DB, Zero Running Cost</span>
@@ -383,17 +385,17 @@
       <!-- Action buttons -->
       <div style="display: flex; gap: var(--sp-3); flex-wrap: wrap; margin-top: var(--sp-6);">
         <a href="/simulation.html" class="btn btn--secondary btn--block" style="text-decoration: none;">
-          <span class="ar-text">🖥️ تجربة المحاكاة وبرمجة التيفو (Studio)</span>
-          <span class="fr-text hidden">🖥️ Simulation & Studio de Programmation</span>
-          <span class="en-text hidden">🖥️ Stadium Simulation & Tifo Studio</span>
+          <span class="ar-text">تجربة المحاكاة وبرمجة التيفو (Studio)</span>
+          <span class="fr-text hidden">Simulation & Studio de Programmation</span>
+          <span class="en-text hidden">Stadium Simulation & Tifo Studio</span>
         </a>
       </div>
 
       <div class="guide-action-bar">
         <a href="/" class="btn btn--primary btn--lg btn--block" style="text-decoration: none; box-shadow: 0 8px 24px rgba(10, 125, 62, 0.4);">
-          <span class="ar-text">ابدأ الآن وادخل للتطبيق 🇩🇿</span>
-          <span class="fr-text hidden">Lancer l'Application Rayati 🇩🇿</span>
-          <span class="en-text hidden">Launch Rayati App Now 🇩🇿</span>
+          <span class="ar-text">ابدأ الآن وادخل للتطبيق</span>
+          <span class="fr-text hidden">Lancer l'Application Rayati</span>
+          <span class="en-text hidden">Launch Rayati App Now</span>
         </a>
       </div>
     </main>

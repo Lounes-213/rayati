@@ -9,3 +9,5 @@ tools/assets/*.mp4
 tools/assets/out/
 # generated calibration artefacts
 corrections.json
+__pycache__/
+*.pyc

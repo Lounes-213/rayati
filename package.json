@@ -19,6 +19,8 @@
     "test:tests": "vitest run --reporter=verbose",
     "size": "node tools/size_report.mjs",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build && npm run size",
+    "studio": "vite --open /control.html",
+    "desktop": "cmd /c Rayti-Studio.bat",
     "seats": "node tools/py.mjs tools/generate_seats.py --out public/seats.json",
     "show": "node tools/py.mjs tools/build_show.py --preset algeria --out public/show.json --preview tools/assets/out/preview.png",
     "calibrate:test": "node tools/py.mjs tools/test_calibration_pipeline.py"
@@ -35,6 +37,8 @@
     "vitest": "^3.2.7"
   },
   "dependencies": {
-    "qrcode": "^1.5.4"
+    "@types/three": "^0.186.0",
+    "qrcode": "^1.5.4",
+    "three": "^0.186.1"
   }
 }
